@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>HKG81 QM Dashboard</title>
+    <link rel="stylesheet" media="screen" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://gitcdn.github.io/bootstrap-toggle/2.2.2/css/bootstrap-toggle.min.css" >
+    <link rel="stylesheet" type="text/css" href="css/bootstrap-datepicker3.min.css"/>
+    <link rel="stylesheet" type="text/css" href="css/main.css"/>
+
+    <script src="http://code.jquery.com/jquery-1.11.3.min.js" type="text/javascript"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" type="text/javascript"></script>
+    <script src="https://api.trello.com/1/client.js?key=8a42b4468e08ca9f165c88d1327add61"></script>
+    <script src="https://gitcdn.github.io/bootstrap-toggle/2.2.2/js/bootstrap-toggle.min.js"></script>
+    <script src="js/bootstrap-datepicker.min.js" type="text/javascript"></script>
+    <script src="js/Autolinker.min.js" type="text/javascript"></script>
+    <script src="js/main.js" type="text/javascript"></script>
+
+    <script type="text/javascript">
+        var requestShortLink;
+        var cards = [];
+        var request;
+        
+        var loadCards = function() {
+            trelloGet('/boards/'+Board+'/cards?checklists=all&actions=updateCheckItemStateOnCard',
+                showRequest,
+                function() { failAlert("load request fail"); }
+            );
+        };
+
+        var showRequest = function(data) {
+            $('#loader').remove();
+            $('#requests').removeClass('hidden');
+
+            var cards = data;
+            
+            // Find request
+            $.each(cards, function(index, card) {
+                if (card.shortLink == requestShortLink)
+                    request = card;
+            });
+            
+            // Get request info
+            var dueDt = null;
+            if (request.due != null)
+                dueDt = new Date(request.due);
+
+            // Check request status
+            var pending = (request.idList == List.pending);
+            var completed = (request.idList == List.completed);
+            var overdue = (dueDt != null && dueDt < new Date() && request.badges.checkItemsChecked < request.badges.checkItems);
+            var active = (!pending && !completed && !overdue);
+
+            // Label
+            var label = '';
+            if (overdue)
+                label += '<span class="label st-label-large bg-overdue">逾時未還</span>';
+            if (pending)
+                label += '<span class="label st-label-large bg-pending">待處理</span>';
+            if (active)
+                label += '<span class="label st-label-large bg-active">進行中</span>';
+            if (completed)
+                label += '<span class="label st-label-large bg-completed">完成</span>';
+            if (label != '')
+                label = '<p>' + label + '</p>';
+
+            // Autolinker: utility to change url text to link
+            var autolinker = new Autolinker({
+                replaceFn : function(autolinker, match) {
+                    // Custom function to get Trello card's name from card url
+                    return cardUrlToName(autolinker, match, cards);
+                }
+            });
+
+            // Autolinker: utility to change url text to link
+            var urlRemover = new Autolinker({
+                replaceFn : function(autolinker, match) {
+                    // Custom function to remove card url
+                    return cardUrlRemove(autolinker, match, cards);
+                }
+            });
+            
+            // Format Description
+            var desc = request.desc;
+            desc = desc.replace(/\n\n\n/g, '<br>'); // \n\n\n -> <br>
+            desc = desc.replace(/\n/g, '<br>'); // \n -> <br>
+            desc = urlRemover.link(desc); // url -> ''
+            desc = desc.replace(/(<br>)+/g, '<br>'); // <br><br><br> -> <br>
+            desc = desc.replace(/-------<br>-------/g, '-------'); // <br><br><br> -> <br>
+
+            // Checklist
+            var checklist = '';
+            if (request.checklists.length > 0) {
+                for (var i = 0; i < request.checklists[0].checkItems.length; i++) {
+                    checklist += '<div>';
+                    if (request.checklists[0].checkItems[i].state == 'incomplete') {
+                        checklist += '<span class="glyphicon glyphicon-remove" aria-hidden="true" style="color: #d9534f"></span> ';
+                    } else {
+                        checklist += '<span class="glyphicon glyphicon-ok" aria-hidden="true" style="color: #5cb85c"></span> ';
+                    }
+                    checklist += autolinker.link(request.checklists[0].checkItems[i].name);
+                    checklist += request.checklists[0].checkItems[i].name;
+                    if (request.checklists[0].checkItems[i].state == 'complete') {
+                        if (request.actions.length > 0) {
+                            for (var j = 0; j < request.actions.length; j++) {
+                                if (request.actions[j].type == 'updateCheckItemStateOnCard' &&
+                                    request.actions[j].data.checkItem.id == request.checklists[0].checkItems[i].id &&
+                                    request.actions[j].data.checkItem.state == 'complete') {
+                                    checklist += ' - <small style="color:#666;"><em>' + request.actions[j].date.substring(0,10) + '</em></small>';
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    checklist += '</div>';
+                }
+            }
+
+            var borrowDt = request.name.substring(0, 10);
+            var dueDt = request.due.substring(0, 10);
+            var activity = request.name.substring(12, request.name.length-1);
+
+            var html = '';
+            
+            html = label +
+                   '<strong>' + activity + '</strong>' +
+                   '<div class="request-subheader">' +
+                   '<span class="glyphicon glyphicon-time" aria-hidden="true"></span> ' + borrowDt + ' / ' + dueDt +
+                   '&nbsp;&nbsp;&nbsp;&nbsp;' +
+                   '<span class="glyphicon glyphicon-check" aria-hidden="true"></span> ' + request.badges.checkItemsChecked+'/'+request.badges.checkItems;
+            $('#request-header').append(html);
+            
+            $('#request-detail').append(desc);
+            
+            // Status
+            if (overdue)
+                $('#request').addClass('overdue');
+            if (pending)
+                $('#request').addClass('pending');
+            if (active)
+                $('#request').addClass('active');
+            if (completed)
+                $('#request').addClass('completed');
+            
+            // Trigger Progress Bar
+            if (pending)
+                $('#progress-bar-btn-pending').triggerHandler('click');
+            else if (completed)
+                $('#progress-bar-btn-complete').triggerHandler('click');
+            else if (overdue)
+                $('#progress-bar-btn-active').triggerHandler('click');
+            else if (active)
+                $('#progress-bar-btn-active').triggerHandler('click');
+            
+        }
+        
+        var updateProgressIcon = function() {
+            $('.bs-wizard-step.disabled .glyphicon').removeClass('glyphicon-arrow-right').removeClass('glyphicon-ok');
+            $('.bs-wizard-step.active .glyphicon').addClass('glyphicon-arrow-right').removeClass('glyphicon-ok');
+            $('.bs-wizard-step.overdue .glyphicon').addClass('glyphicon-arrow-right').removeClass('glyphicon-ok');
+            $('.bs-wizard-step.complete .glyphicon').removeClass('glyphicon-arrow-right').addClass('glyphicon-ok');
+        }
+        
+        var updateProgressStatus = function(progress_step, status) {
+            if (status == 'disabled')
+                $(progress_step).addClass('disabled').removeClass('active').removeClass('overdue').removeClass('complete');
+            else if (status == 'active')
+                $(progress_step).removeClass('disabled').addClass('active').removeClass('overdue').removeClass('complete');
+            else if (status == 'overdue')
+                $(progress_step).removeClass('disabled').removeClass('active').addClass('overdue').removeClass('complete');
+            else if (status == 'complete')
+                $(progress_step).removeClass('disabled').removeClass('active').removeClass('overdue').addClass('complete');
+        }
+        
+        var updateOverdueStatus = function() {
+            if ($('#progress-step-active').hasClass('overdue')) {
+                $('#progress-step-title-active').html('逾時未還').addClass('txt-overdue');
+            } else {
+                $('#progress-step-title-active').html('進行中').removeClass('txt-overdue');
+            }
+        }
+        
+        var updateProgressBar = function(pct) {
+            $('.bs-wizard .progress-bar').width(pct);
+        }
+
+        $(function(){
+            requestShortLink = urlParam('i');
+
+            if (requestShortLink !== null) {
+                trelloAuthorize(loadCards);
+            } else {
+                $('#loader').remove();
+                failAlert("<strong>錯誤: </strong>Param is not existed.");
+            }
+            
+            $('#progress-bar-btn-pending').on('click', function() {
+                updateProgressStatus('#progress-step-pending', 'active');
+                updateProgressStatus('#progress-step-active', 'disabled');
+                updateProgressStatus('#progress-step-complete', 'disabled');
+                updateOverdueStatus();
+                updateProgressIcon();
+                updateProgressBar('0');
+            });
+            
+            $('#progress-bar-btn-active').on('click', function() {
+                updateProgressStatus('#progress-step-pending', 'complete');
+                updateProgressStatus('#progress-step-active', $('#request').hasClass('overdue') ? 'overdue' : 'active');
+                updateProgressStatus('#progress-step-complete', 'disabled');
+                updateOverdueStatus();
+                updateProgressIcon();
+                updateProgressBar('50%');
+            });
+            
+            $('#progress-bar-btn-complete').on('click', function() {
+                updateProgressStatus('#progress-step-pending', 'complete');
+                updateProgressStatus('#progress-step-active', 'complete');
+                updateProgressStatus('#progress-step-complete', 'complete');
+                updateOverdueStatus();
+                updateProgressIcon();
+                updateProgressBar('100%');
+            });
+        });
+    </script>
+</head>
+<body>
+    <nav class="navbar navbar-default navbar-fixed-top">
+        <div class="container-fluid">
+            <div class="navbar-header">
+                <a class="navbar-brand" href="#">HKG81 QM</a>
+            </div>
+            <ul class="nav navbar-nav">
+                <li><a href="index.html">首頁</a></li>
+                <li class="active"><a href="request.html">借用申請</a></li>
+                <li><a href="list.html">物資清單</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+
+        <div class="alert hidden" role="alert" id="alert-box">
+            <span id="alert-msg"></span>
+        </div>
+
+        <div id="loader" style="text-align:center;">
+            <img src="img/loading.gif"/>
+        </div>
+        <div id="requests" class="row hidden">
+            <div class="col-xs-12 col-sm-6">
+                <div id="request" class="request">
+                    <div class="request-header" id="request-header">
+                    </div>
+                    <div class="request-body" id="request-detail">
+                    </div>
+                    <div class="request-footer">
+                        <div class="row bs-wizard">
+                            <div id="progress-step-pending" class="col-xs-4 bs-wizard-step complete">
+                                <div class="text-center bs-wizard-stepnum">待處理</div>
+                                <a href="javascript: ;" id="progress-bar-btn-pending" class="bs-wizard-dot"><span class="glyphicon" aria-hidden="true"></span></a>
+                            </div>
+                            <div id="progress-step-active" class="col-xs-4 bs-wizard-step disabled">
+                                <div class="text-center bs-wizard-stepnum" id="progress-step-title-active">進行中</div>
+                                <a href="javascript: ;" id="progress-bar-btn-active" class="bs-wizard-dot"><span class="glyphicon" aria-hidden="true"></span></a>
+                            </div>
+                            <div id="progress-step-complete" class="col-xs-4 bs-wizard-step disabled">
+                                <div class="text-center bs-wizard-stepnum">完成</div>
+                                <a href="javascript: ;" id="progress-bar-btn-complete" class="bs-wizard-dot"><span class="glyphicon" aria-hidden="true"></span></a>
+                            </div>
+                            <div class="progress"><div class="progress-bar progress-bar-success"></div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xs-12 col-sm-6">
+                <div class="request request-items" id="request-items">
+                    <div class="request-header">
+                        <strong>清單</strong>
+                    </div>
+                    <div class="request-body">
+                        <!--<input type="checkbox" id="test-toggle" data-toggle="toggle" data-style="pull-right" data-width="80" data-on="<span class='glyphicon glyphicon-arrow-left' aria-hidden='true'></span> 借出" data-onstyle="success" data-off="<span class='glyphicon glyphicon-arrow-right' aria-hidden='true'></span> 歸還" data-offstyle="info" >-->
+                        <div class="material-switch pull-right">
+                            <input id="someSwitchOptionPrimary" name="someSwitchOption001" type="checkbox"/>
+                            <label for="someSwitchOptionPrimary" class="label-success"></label>
+                        </div>
+                        HKG81/TE/01
+                        <div class="request-subheader">
+                            <span class="glyphicon glyphicon-map-marker" aria-hidden="true"></span> 借用中
+                        </div>
+                        <a href="javascript: ;" id="progress-bar-btn-pending" class="bs-wizard-dot"><span class="glyphicon" aria-hidden="true"></span></a>
+                    </div>
+                    <div class="request-body">
+                        HKG81/TE/02
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div style="height: 100px">&nbsp;</div>
+    </div>
+
+</body>
+</html>

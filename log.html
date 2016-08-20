@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>HKG81 QM Dashboard</title>
+    <link rel="stylesheet" media="screen" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="css/bootstrap-datepicker3.min.css"/>
+    <link rel="stylesheet" type="text/css" href="css/main.css"/>
+
+    <script src="http://code.jquery.com/jquery-1.11.3.min.js" type="text/javascript"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" type="text/javascript"></script>
+    <script src="https://api.trello.com/1/client.js?key=8a42b4468e08ca9f165c88d1327add61"></script>
+    <script src="js/bootstrap-datepicker.min.js" type="text/javascript"></script>
+    <script src="js/Autolinker.min.js" type="text/javascript"></script>
+    <script src="js/main.js" type="text/javascript"></script>
+
+    <script type="text/javascript">
+        var card;
+        var loadcard = function(cardShortLink) {
+            trelloGet('/cards/'+cardShortLink+'?fields=all&actions=updateCard:idList,commentCard',
+                showCard,
+                function() { failAlert("load card fail"); }
+            );
+        };
+        
+        var showCard = function(data) {
+            $('#loader').remove();
+            $('#logs').removeClass('hidden');
+
+            card = data;
+            
+            $('#logs-heading-btn').append(card.name);
+            console.log('card.shortLink='+card.shortLink);
+            $('#logs-heading-btn').data('shortLink', card.shortLink);
+            
+            var actions = card.actions;
+            
+            // Create a DOM for each action
+            $.each(actions, function(index, action) {
+                var html = "<tr>";
+                //var html = "<li class='list-group-item'>";
+                if (action.type == 'updateCard') {
+                    var type = "";
+                    if (action.data.listAfter.id == List.cupboardA ||
+                            action.data.listAfter.id == List.cupboardB ||
+                            action.data.listAfter.id == List.cupboardC ||
+                            action.data.listAfter.id == List.cupboardOut) {
+                        type = "in";
+                    } else if (action.data.listAfter.id == List.drying) {
+                        type = "drying";
+                    } else if (action.data.listAfter.id == List.repair) {
+                        type = "repair";
+                    } else {
+                        type = "out";
+                    }
+                    
+                    html += '<td class="logs-icon-cell">';
+                    if (type == "in") {
+                        html += '<span class="glyphicon glyphicon-arrow-right logs-icon txt-in" aria-hidden="true"></span>';
+                    } else if (type == "out") {
+                        html += '<span class="glyphicon glyphicon-arrow-left logs-icon txt-out" aria-hidden="true"></span>';
+                    } else if (type == "drying") {
+                        html += '<span class="glyphicon glyphicon-tint logs-icon txt-drying" aria-hidden="true"></span>';
+                    } else if (type == "repair") {
+                        html += '<span class="glyphicon glyphicon-wrench logs-icon txt-repair" aria-hidden="true"></span>';
+                    }
+                    html += '</td>';
+                    html += '<td>';
+                    html += '<div class="logs-body">';
+                    if (type == "in") {
+                        html += '歸還並存放於 [' + action.data.listAfter.name + ']';
+                    } else if (type == "out") {
+                        html += '借出予 [' + action.data.listAfter.name + ']';
+                    } else if (type == "drying") {
+                        html += '在學校晾曬中';
+                    } else if (type == "repair") {
+                        html += '取出維修中';
+                    }
+                    html += '<div class="logs-date">' + dateFormat(new Date(action.date)) + '</div>';
+                    html += '</div>';
+                    html += '</td>';
+                } else if (action.type == 'commentCard') {
+                    var comment = action.data.text;
+                    comment = comment.replace(/\n/g, '<br>'); // \n -> <br>
+                
+                    html += '<td class="logs-icon-cell">';
+                    html += '<span class="glyphicon glyphicon-comment logs-icon txt-comment" aria-hidden="true"></span>';
+                    html += '</td>';
+                    html += '<td>';
+                    html += '<div class="logs-body">';
+                    html += comment;
+                    html += '<div class="logs-date">' + dateFormat(new Date(action.date)) + '</div>';
+                    html += '</div>';
+                    html += '</td>';
+                }
+                html += "</tr>";
+                //html += "</li>";
+                
+                //$('#logs-list').append(html);
+                $('#logs-table').append(html);
+            });
+            
+        }
+        
+        $(function(){
+            var cardShortLink = urlParam('i');
+
+            if (cardShortLink !== null) {
+                trelloAuthorize(function() {
+					loadcard(cardShortLink);
+				});
+            } else {
+                $('#loader').remove();
+                failAlert("<strong>錯誤: </strong>Card ID is not existed.");
+            }
+            
+            $('#logs-heading-btn').on('click', function (){
+                window.location.href = 'list.html?i=' + $(this).data('shortLink');
+            });
+        });
+    </script>
+</head>
+<body>
+    <nav class="navbar navbar-default navbar-fixed-top">
+        <div class="container-fluid">
+            <div class="navbar-header">
+                <a class="navbar-brand" href="#">HKG81 QM</a>
+            </div>
+            <ul class="nav navbar-nav">
+                <li><a href="index.html">首頁</a></li>
+                <li><a href="request.html">借用申請</a></li>
+                <li class="active"><a href="list.html">物資清單</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+
+        <div class="alert hidden" role="alert" id="alert-box">
+            <span id="alert-msg"></span>
+        </div>
+
+        <div id="loader" style="text-align:center;">
+            <img src="img/loading.gif"/>
+        </div>
+        <div class="panel panel-default logs-panel hidden" id="logs">
+            <div class="panel-heading logs-heading">
+                <button type="button" class="btn btn-link" id="logs-heading-btn" data-shortLink="">
+                    <span class="glyphicon glyphicon-menu-left" aria-hidden="true"></span>&nbsp;
+                </button>
+            </div>
+            <!--<div class="panel-body" ></div>-->
+
+            <!--<ul class="list-group" id="logs-list"></ul>-->
+            <table class="table" id="logs-table"></table>
+        </div>
+        
+        <div style="height: 100px">&nbsp;</div>
+    </div>
+
+</body>
+</html>

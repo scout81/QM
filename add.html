@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>HKG81 QM Dashboard</title>
+    <link rel="stylesheet" media="screen" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="css/bootstrap-datepicker3.min.css"/>
+    <link rel="stylesheet" type="text/css" href="css/main.css"/>
+
+    <script src="http://code.jquery.com/jquery-1.11.3.min.js" type="text/javascript"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js" type="text/javascript"></script>
+    <script src="https://api.trello.com/1/client.js?key=8a42b4468e08ca9f165c88d1327add61"></script>
+    <script src="js/bootstrap-datepicker.min.js" type="text/javascript"></script>
+    <script src="js/main.js" type="text/javascript"></script>
+
+    <script type="text/javascript">
+        var cards = [];
+        var param;
+
+        var loadedListCount = 0;
+
+        var loadLists = function() {
+            for (var i = 0; i < List.inSchool.length; i++) {
+                trelloGet('/lists/'+List.inSchool[i]+'/cards',
+                    concatLists,
+                    function() { failAlert("load list "+List.inSchool[i]+" fail"); }
+                );
+            }
+        };
+
+        var concatLists = function(lists) {
+            cards = cards.concat(lists);
+
+            loadedListCount++;
+            if (loadedListCount == List.inSchool.length) {
+                createItemCheckboxes();
+
+                $('#loader').remove();
+                $('.items').removeClass('hidden');
+            }
+        };
+
+        var createItemCheckboxes = function() {
+            cards.sort( function(a, b) {
+                return a.name.localeCompare(b.name);
+            });
+
+            $.each(cards, function(index, card) {
+                
+                var checkbox = '<div class="col-xs-6 col-sm-4 col-md-3" style="padding-bottom: 5px;">';
+                
+                // have Damaged Label
+                if (hasLabel(card, Label.damaged)) {
+                    checkbox += '<button type="button" class="btn btn-default items-btn" id="items-btn-'+card.shortLink+'" data-toggle="button" aria-pressed="false" autocomplete="off" data-target="#items-cb-'+card.shortLink+'">'+card.name+'<span class="st-label-small bg-damaged">&nbsp;</span></button>';
+                // have Broken Label
+                } else if (hasLabel(card, Label.broken)) {
+                    checkbox += '<button type="button" class="btn btn-default items-btn" id="items-btn-'+card.shortLink+'" data-toggle="button" aria-pressed="false" autocomplete="off" data-target="#items-cb-'+card.shortLink+'" disabled>'+card.name+'<span class="st-label-small bg-broken">&nbsp;</span></button>';
+                // Normal
+                } else {
+                    checkbox += '<button type="button" class="btn btn-default items-btn" id="items-btn-'+card.shortLink+'" data-toggle="button" aria-pressed="false" autocomplete="off" data-target="#items-cb-'+card.shortLink+'">'+card.name+'</button>';
+                }
+                
+                checkbox += '<input type="checkbox" name="items" id="items-cb-'+card.shortLink+'" value="'+card.shortLink+'" class="hidden" data-name="'+card.name+'" data-url="'+card.url+'"/>';
+                checkbox += '</div>';
+                
+
+                if (hasLabel(card, Label.tent)) {
+                    $('#tent-items').append(checkbox);
+                } else if (hasLabel(card, Label.yurt)) {
+                    $('#yurt-items').append(checkbox);
+                } else if (hasLabel(card, Label.tentpeg)) {
+                    $('#tentpeg-items').append(checkbox);
+                } else if (hasLabel(card, Label.fly)) {
+                    $('#fly-items').append(checkbox);
+                } else if (hasLabel(card, Label.cookset)) {
+                    $('#cookset-items').append(checkbox);
+                } else if (hasLabel(card, Label.stove)) {
+                    $('#stove-items').append(checkbox);
+                } else {
+                    $('#other-items').append(checkbox);
+                }
+                
+            });
+
+            if (param !== null) {
+                $.each(param.items, function(index, item) {
+                    $('input[name=items][value="'+item.shortLink+'"]').attr('checked', true);
+                    $('#items-btn-'+item.shortLink).attr('aria-pressed', true)
+                        .removeClass('btn-default')
+                        .addClass('btn-success')
+                        .addClass('active');
+                });
+            }
+            
+            $('.items-btn').on('click', function() {
+                var target = $(this).data('target');
+                if ($(this).attr('aria-pressed') == 'true') {
+                    $(target).prop('checked', false);
+                    $(this).removeClass('btn-success')
+                        .addClass('btn-default');
+                } else {
+                    $(target).prop('checked', true);
+                    $(this).removeClass('btn-default')
+                        .addClass('btn-success');
+                }
+            });
+        }
+
+        var validateFrom = function() {
+            var isValid = true;
+
+            // Check required
+            $('[required]').each(function(index){
+                if ($(this).is(':text, [type=email]')) {
+                    var helpBlock = '<span class="help-block">必須填上。</span>';
+                    if ($(this).val() == "") {
+                        $(this).closest('.form-group').addClass('has-error');
+                        if ($(this).next('.help-block').length == 0) {
+                            $(this).after(helpBlock);
+                        }
+                        isValid = false;
+                    } else {
+                        $(this).closest('.form-group').removeClass('has-error');
+                        $(this).next('.help-block').remove();
+                    }
+                } else if ($(this).is(':radio')) {
+                    var helpBlock = '<span class="help-block">必須選擇。</span>';
+                    var radioName = $(this).attr('name');
+                    var $firstRadio = $(':radio[name='+radioName+']:first');
+
+                    if ($(':radio:checked[name='+radioName+']').length == 0) {
+                        $(this).closest('.form-group').addClass('has-error');
+
+                        if ($firstRadio.closest('.radio-inline').next('.help-block').length == 0) {
+                            $firstRadio.closest('.radio-inline').after(helpBlock);
+                        }
+                        isValid = false;
+                    } else {
+                        $(this).closest('.form-group').removeClass('has-error');
+                        $firstRadio.closest('.radio-inline').next('.help-block').remove();
+                    }
+                }
+            });
+
+            // Check items
+            if ($(':checkbox:checked[name=items]').length == 0) {
+                var helpBlock = '<span class="help-block" style="color:#a94442;">必須至少選擇一項。</span>';
+                $('.items').addClass('has-error');
+                if ($('.items:first').prev('.help-block').length == 0) {
+                    $('.items:first').before(helpBlock);
+                }
+                isValid = false;
+            } else {
+                $('.items').removeClass('has-error');
+                $('.items:first').prev('.help-block').remove();
+            }
+
+            // Check email
+            $('[type=email]').each(function(index){
+                var helpBlock = '<span class="help-block">格式不正確。</span>';
+                if ($(this).val() != "") {
+                    if (isEmail($(this).val())) {
+                        $(this).closest('.form-group').removeClass('has-error');
+                        $(this).next('.help-block').remove();
+                    } else {
+                        $(this).closest('.form-group').addClass('has-error');
+                        if ($(this).next('.help-block').length == 0) {
+                            $(this).after(helpBlock);
+                        }
+                        isValid = false;
+                    }
+                }
+            });
+
+            // Check Date
+            if ($('#borrow_dt').val() != "" && $('#return_dt').val()) {
+                var borrowDtArray = $('#borrow_dt').val().split("-");
+                var returnDtArray = $('#return_dt').val().split("-");
+                var borrowDt = new Date(borrowDtArray[0], borrowDtArray[1]-1, borrowDtArray[2]);
+                var returnDt = new Date(returnDtArray[0], returnDtArray[1]-1, returnDtArray[2]);
+                if (returnDt.getTime() >= borrowDt.getTime()) {
+                    $('#borrow_dt').closest('.form-group').removeClass('has-error');
+                    $('#return_dt').closest('.form-group').removeClass('has-error');
+                    $('#borrow_dt').next('.help-block').remove();
+                } else {
+                    var helpBlock = '<span class="help-block">借用日期必須在歸還日期之前。</span>';
+                    $('#borrow_dt').closest('.form-group').addClass('has-error');
+                    $('#return_dt').closest('.form-group').addClass('has-error');
+
+                    if ($('#borrow_dt').next('.help-block').length == 0) {
+                        $('#borrow_dt').after(helpBlock);
+                    }
+                    isValid = false;
+                }
+            }
+
+            // Change focus
+            var $firstErrorInput = $(".has-error:first :input:first");
+            if ($firstErrorInput.length !== 0) {
+                if ($firstErrorInput.is('.items-btn')) {
+                    $('html, body').animate({scrollTop: $firstErrorInput.offset().top - 170}, 250);
+                } else {
+                    $('html, body').animate({scrollTop: $firstErrorInput.offset().top - 130}, 250);
+                }
+                $firstErrorInput.focus();
+            }
+
+            return isValid;
+        }
+
+        var serializeFormAndSubmit = function() {
+            var items = [];
+            $('input:checked[name=items]').each(function(index){
+                var i = {
+                    name: $(this).data('name'),
+                    url: $(this).data('url'),
+                    shortLink: $(this).val()
+                };
+                items.push(i);
+            });
+
+            var data = {
+                branch: $('input:checked[name=branch]').val(),
+                applicant: $('#applicant').val(),
+                post: $('#post').val(),
+                email: $('#email').val(),
+                activity: $('#activity').val(),
+                borrow_dt: $('#borrow_dt').val(),
+                return_dt: $('#return_dt').val(),
+                items: items,
+                remarks: $('#remarks').val()
+            };
+
+            var param = encodeURIComponent(JSON.stringify(data));
+            window.location.href = "confirm.html?param="+param;
+        }
+
+        var resetForm = function() {
+            $('input:checked[name=branch]').attr('checked', false);
+            $('#applicant').val("");
+            $('#post').val("");
+            $('#email').val("");
+            $('#activity').val("");
+            $('#borrow_dt').val("");
+            $('#return_dt').val("");
+            $('#remarks').val("");
+            $('input:checked[name=items]').attr('checked', false);
+            $('.items-btn').attr('aria-pressed', false)
+                .removeClass('btn-success')
+                .addClass('btn-default')
+                .removeClass('active');
+                
+            // Change focus
+            var $firstInput = $(":input:first");
+            if ($firstInput.length !== 0) {
+                if ($firstInput.is('.items-btn')) {
+                    $('html, body').animate({scrollTop: $firstInput.offset().top - 170}, 250);
+                } else {
+                    $('html, body').animate({scrollTop: $firstInput.offset().top - 130}, 250);
+                }
+                $firstInput.focus();
+            }
+        }
+
+        var loadUrlParam = function() {
+            param = JSON.parse(urlParam('param'));
+
+            if (param !== null) {
+                $('input[name=branch][value='+param.branch+']').attr('checked', true);
+                $('#applicant').val(param.applicant);
+                $('#post').val(param.post);
+                $('#email').val(param.email);
+                $('#activity').val(param.activity);
+                $('#borrow_dt').val(param.borrow_dt);
+                $('#return_dt').val(param.return_dt);
+                $('#remarks').val(param.remarks);
+            }
+        }
+
+        $(function(){
+            $("#next").on("click", function() {
+                if (validateFrom())
+                    serializeFormAndSubmit();
+            });
+
+            $("#reset").on("click", resetForm);
+
+            loadUrlParam();
+            trelloAuthorize(loadLists);
+        });
+    </script>
+</head>
+<body>
+    <nav class="navbar navbar-default navbar-fixed-top">
+        <div class="container-fluid">
+            <div class="navbar-header">
+                <a class="navbar-brand" href="#">HKG81 QM</a>
+            </div>
+            <ul class="nav navbar-nav">
+                <li><a href="index.html">首頁</a></li>
+                <li class="active"><a href="request.html">借用申請</a></li>
+                <li><a href="list.html">物資清單</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+
+        <div class="alert hidden" role="alert" id="alert-box">
+            <span id="alert-msg"></span>
+        </div>
+
+        <form name="form" id="borrow_form" class="form-horizontal">
+            <div id="item_info" class="panel panel-default">
+                <div class="panel-body">
+                    <div class="form-group">
+                        <label class="control-label col-xs-4 col-sm-2">支部</label>
+                        <div class="col-xs-4 col-sm-2">
+                            <label class="radio-inline">
+                                <input type="radio" name="branch" value="scout" required> 童軍
+                            </label>
+                        </div>
+                        <div class="col-xs-4 col-sm-2">
+                            <label class="radio-inline">
+                                <input type="radio" name="branch" value="venture" required> 深資童軍
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="applicant" class="control-label col-xs-4 col-sm-2">申請人</label>
+                        <div class="col-xs-8 col-sm-10">
+                            <input type="text" name="applicant" id="applicant" class="form-control" value="" required/>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="post" class="control-label col-xs-4 col-sm-2">職位</label>
+                        <div class="col-xs-8 col-sm-10">
+                            <input type="text" name="post" id="post" class="form-control" value="" required/>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="email" class="control-label col-xs-4 col-sm-2">E-mail</label>
+                        <div class="col-xs-8 col-sm-10">
+                            <input type="email" name="email" id="email" class="form-control" value="" required/>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="activity" class="control-label col-xs-4 col-sm-2">活動</label>
+                        <div class="col-xs-8 col-sm-10">
+                            <input type="text" name="activity" id="activity" class="form-control" value="" required/>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="borrow_dt" class="control-label col-xs-4 col-sm-2">借用日期</label>
+                        <div class="col-xs-8 col-sm-10">
+                            <input type="text" name="borrow_dt" id="borrow_dt" class="form-control datepicker" placeholder="yyyy-mm-dd" value="" required/>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="return_dt" class="control-label col-xs-4 col-sm-2">歸還日期</label>
+                        <div class="col-xs-8 col-sm-10">
+                            <input type="text" name="return_dt" id="return_dt" class="form-control datepicker" placeholder="yyyy-mm-dd" value="" required/>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="col-xs-12" style="text-align:right; font-size: 10px; color: #666666;">
+                            <span class="st-label-key"><span class="st-label bg-damaged">&nbsp;</span>損壞</span>
+                            <span class="st-label-key"><span class="st-label bg-broken">&nbsp;</span>不能使用</span>
+
+                        </div>
+                    </div>
+                    <div class="form-group" id="loader">
+                        <div class="col-xs-12 col-sm-12" style="text-align:center;">
+                            <img src="img/loading.gif"/>
+                        </div>
+                    </div>
+                    <div class="form-group hidden items">
+                        <label class="control-label col-xs-12 col-sm-2" style="padding-bottom: 5px;">A字營</label>
+                        <div id="tent-items" class="col-xs-12 col-sm-10" style="padding-left: 0px; padding-right: 0px;"></div>
+                    </div>
+                    <div class="form-group hidden items">
+                        <label class="control-label col-xs-12 col-sm-2" style="padding-bottom: 5px;">蒙古包</label>
+                        <div id="yurt-items" class="col-xs-12 col-sm-10" style="padding-left: 0px; padding-right: 0px;"></div>
+                    </div>
+                    <div class="form-group hidden items">
+                        <label class="control-label col-xs-12 col-sm-2" style="padding-bottom: 5px;">營釘</label>
+                        <div id="tentpeg-items" class="col-xs-12 col-sm-10" style="padding-left: 0px; padding-right: 0px;"></div>
+                    </div>
+                    <div class="form-group hidden items">
+                        <label class="control-label col-xs-12 col-sm-2" style="padding-bottom: 5px;">天幕</label>
+                        <div id="fly-items" class="col-xs-12 col-sm-10" style="padding-left: 0px; padding-right: 0px;"></div>
+                    </div>
+                    <div class="form-group hidden items">
+                        <label class="control-label col-xs-12 col-sm-2" style="padding-bottom: 5px;">炊具</label>
+                        <div id="cookset-items" class="col-xs-12 col-sm-10" style="padding-left: 0px; padding-right: 0px;"></div>
+                    </div>
+                    <div class="form-group hidden items">
+                        <label class="control-label col-xs-12 col-sm-2" style="padding-bottom: 5px;">爐頭</label>
+                        <div id="stove-items" class="col-xs-12 col-sm-10" style="padding-left: 0px; padding-right: 0px;"></div>
+                    </div>
+                    <div class="form-group hidden items">
+                        <label class="control-label col-xs-12 col-sm-2" style="padding-bottom: 5px;">其他</label>
+                        <div id="other-items" class="col-xs-12 col-sm-10" style="padding-left: 0px; padding-right: 0px;"></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="remarks" class="control-label col-xs-12 col-sm-2" style="padding-bottom: 5px;">備註</label>
+                        <div class="col-xs-12 col-sm-10">
+                            <textarea class="form-control" name="remarks" id="remarks" rows="3" style="resize: vertical;" placeholder="如需要其他物資，請在此填上．"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="panel-footer">
+                    <div class="form-group">
+                        <div class="col-xs-12 col-sm-12">
+                            <button type="button" class="btn btn-default" id="reset">重設</button>
+                            &nbsp;&nbsp;
+                            <button type="button" class="btn btn-default" id="next">下一步</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</body>
+</html>

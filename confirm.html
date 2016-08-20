@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>HKG81 QM Dashboard</title>
+    <link rel="stylesheet" media="screen" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="css/bootstrap-datepicker3.min.css"/>
+    <link rel="stylesheet" type="text/css" href="css/main.css"/>
+
+    <script src="http://code.jquery.com/jquery-1.11.3.min.js" type="text/javascript"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" type="text/javascript"></script>
+    <script src="https://api.trello.com/1/client.js?key=8a42b4468e08ca9f165c88d1327add61"></script>
+    <script src="js/bootstrap-datepicker.min.js" type="text/javascript"></script>
+    <script src="js/main.js" type="text/javascript"></script>
+
+    <script type="text/javascript">
+        var param;
+        var addLabelSuccCount = 0;
+        var addLabelErrCount = 0;
+        var addChklstItemSuccCount = 0;
+        var addChklstItemErrCount = 0;
+
+        var loadParam = function(data) {
+            if (data.branch == 'scout')
+                $('#branch').append('童軍');
+            else if (data.branch == 'venture')
+                $('#branch').append('深資童軍');
+            $('#applicant').append(data.applicant);
+            $('#post').append(data.post);
+            $('#email').append(data.email);
+            $('#activity').append(data.activity);
+            $('#borrow_dt').append(data.borrow_dt);
+            $('#return_dt').append(data.return_dt);
+            $('#remarks').append(data.remarks.replace(/\n/g, '<br>'));
+
+            $.each(data.items, function(index, item) {
+                var html = item.name+'<br/>';
+                $('#items').append(html);
+            });
+        }
+
+        var addCard = function() {
+            var itemUrls = "";
+            $.each(param.items, function(index, item) {
+                itemUrls += item.url + "\n";
+            });
+            
+            var returnDtArray = param.return_dt.split("-");
+            
+            var branchDesc;
+            if (param.branch == 'scout')
+                branchDesc = '童軍';
+            else if (param.branch == 'venture')
+                branchDesc = '深資童軍';
+                
+            var newCard = {
+                name: param.borrow_dt + " [" + param.activity + "]",
+                desc: "支部: " + branchDesc + "\n" +
+                      "申請人: " + param.applicant + "\n" +
+                      "職位: " + param.post + "\n" +
+                      "E-mail: " + param.email + "\n" +
+                      "活動: " + param.activity + "\n" +
+                      "借用日期: " + param.borrow_dt + "\n" +
+                      "歸還日期: " + param.return_dt + "\n" +
+                      "\n\n-------\n" + 
+                      itemUrls +
+                      "\n\n-------\n" +
+                      "備註: \n" + param.remarks,
+                idList: List.pending,
+                due: new Date(returnDtArray[0], returnDtArray[1]-1, returnDtArray[2])
+            };
+
+            trelloPost('/cards',
+                newCard,
+                addLabelAndChecklist,
+                function() { showError("<strong>錯誤: </strong>請重新提交申請。<br/>(Add Card Failed)"); }
+            );
+
+        }
+
+        var addLabelAndChecklist = function(card) {
+            trelloPost('/cards/'+card.id+'/idLabels',
+                { value: Label.borrowRec },
+                function() { addLabelSuccCount++; addCardFinishing(); },
+                function() { addLabelErrCount++; addCardFinishing(); }
+            );
+
+            trelloPost('/cards/'+card.id+'/checklists',
+                { name: 'Return Checklist' },
+                addChecklistItems,
+                function() { showError("<strong>錯誤: </strong>請重新提交申請。<br/>(Add Checklist Failed)"); }
+            );
+        }
+
+        var addChecklistItems = function(checklist) {
+            $.each(param.items, function(index, item) {
+                trelloPost('/checklists/'+checklist.id+'/checkItems',
+                    { name: item.url,
+                      pos: index+1
+                    },
+                    function() { addChklstItemSuccCount++; addCardFinishing(); },
+                    function() { addChklstItemErrCount++; addCardFinishing(); }
+                );
+            });
+        }
+
+        var addCardFinishing = function() {
+            var total = param.items.length + 1;
+            if (addLabelSuccCount + addLabelErrCount + addChklstItemSuccCount + addChklstItemErrCount >= total) {
+                if (addLabelErrCount > 0) {
+                    showError("<strong>錯誤: </strong>請重新提交申請。<br/>(Add Label Failed)");
+                } else if (addChklstItemErrCount > 0) {
+                    showError("<strong>錯誤: </strong>請重新提交申請。<br/>(Add Checklist Item Failed)");
+                } else {
+					var mailTo = ADMIN_EMAIL;
+					var mailCc = param.email;
+					var mailSubject = "[81st HKG] 物資借用申請 - " + param.activity;
+					var mailMessage = 
+						"<table>" +
+						"<tr><td><b>支部:</b></td><td>" + param.branch == 'scout' ? '童軍' : param.branch == 'venture' ? '深資童軍' : '' + "</td></tr>" +
+						"<tr><td><b>申請人:</b></td><td>" + param.applicant + "</td></tr>" +
+						"<tr><td><b>職位:</b></td><td>" + param.post + "</td></tr>" +
+						"<tr><td><b>E-mail:</b></td><td>" + param.email + "</td></tr>" +
+						"<tr><td><b>活動:</b></td><td>" + param.activity + "</td></tr>" +
+						"<tr><td><b>借用日期:</b></td><td>" + param.borrow_dt + "</td></tr>" +
+						"<tr><td><b>歸還日期:</b></td><td>" + param.return_dt + "</td></tr>" +
+						"<tr><td style='vertical-align: top;'><b>物資清單:</b></td><td>";
+					
+					$.each(param.items, function(index, item) {
+						mailMessage += item.name+'<br/>';
+					});
+						
+					mailMessage +=
+						"</td></tr>" +
+						"<tr><td style='vertical-align: top;'><b>備註:</b></td><td>" + 
+						param.remarks.replace(/\n/g, '<br/>') +
+						"</td></tr>" +
+						"</table>";
+					
+					sendEmail(mailTo, mailCc, mailSubject, mailMessage, 
+						function () {
+							showSuccess("<strong>成功! </strong>申請已完成。");
+						}, 
+						function () {
+							showError("<strong>錯誤: </strong>請重新提交申請。<br/>(Send Email Failed)");
+						}
+					);
+                    
+                }
+            }
+        }
+
+        var showSuccess = function(msg) {
+            dismissLoader();
+            successAlert(msg);
+            $('#button-panel').hide();
+        }
+
+        var showError = function(msg) {
+            dismissLoader();
+            failAlert(msg);
+            $('#button-panel').hide();
+        }
+
+        var showLoader = function() {
+            $('#loading-overlay').removeClass('hidden');
+            $(".nav a").on("click", showConfirmation);
+        }
+
+        var dismissLoader = function() {
+            $('#loading-overlay').remove();
+            $(".nav a").off("click", showConfirmation);
+        }
+        
+        var showConfirmation = function() {
+            return confirm('申請未完成，確定要離開？');
+        };
+
+        $(function(){
+            param = JSON.parse(urlParam('param'));
+
+            if (param !== null) {
+                trelloAuthorize(function() {
+					loadParam(param);
+				});
+            } else {
+                $('#confirm-container').hide();
+                showError("<strong>錯誤: </strong>請重新提交申請。<br>(Param is not existed.)");
+            }
+			
+			$('#back').on('click', function() {
+                var param2 = encodeURIComponent(JSON.stringify(param));
+                window.location.href = "add.html?param="+param2;
+            });
+
+            $("#submit").on("click", function() {
+                showLoader();
+                addCard(param);
+            });
+        });
+    </script>
+</head>
+<body>
+    <nav class="navbar navbar-default navbar-fixed-top">
+        <div class="container-fluid">
+            <div class="navbar-header">
+                <a class="navbar-brand" href="#">HKG81 QM</a>
+            </div>
+            <ul class="nav navbar-nav">
+                <li><a href="index.html">首頁</a></li>
+                <li class="active"><a href="request.html">借用申請</a></li>
+                <li><a href="list.html">物資清單</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="hidden alert" role="alert" id="alert-box">
+            <span id="alert-msg"></span>
+        </div>
+
+        <div id="confirm-container" class="panel panel-default">
+            <div class="panel-body">
+                <div class="row confirm-row">
+                    <div class="col-xs-4 col-sm-2 confirm-label">支部</div>
+                    <div class="col-xs-8 col-sm-10" id="branch"></div>
+                </div>
+                <div class="row confirm-row">
+                    <div class="col-xs-4 col-sm-2 confirm-label">申請人</div>
+                    <div class="col-xs-8 col-sm-10" id="applicant"></div>
+                </div>
+                <div class="row confirm-row">
+                    <div class="col-xs-4 col-sm-2 confirm-label">職位</div>
+                    <div class="col-xs-8 col-sm-10" id="post"></div>
+                </div>
+                <div class="row confirm-row">
+                    <div class="col-xs-4 col-sm-2 confirm-label">E-mail</div>
+                    <div class="col-xs-8 col-sm-10" id="email"></div>
+                </div>
+                <div class="row confirm-row">
+                    <div class="col-xs-4 col-sm-2 confirm-label">活動</div>
+                    <div class="col-xs-8 col-sm-10" id="activity"></div>
+                </div>
+                <div class="row confirm-row">
+                    <div class="col-xs-4 col-sm-2 confirm-label">借用日期</div>
+                    <div class="col-xs-8 col-sm-10" id="borrow_dt"></div>
+                </div>
+                <div class="row confirm-row">
+                    <div class="col-xs-4 col-sm-2 confirm-label">歸還日期</div>
+                    <div class="col-xs-8 col-sm-10" id="return_dt"></div>
+                </div>
+                <div class="row confirm-row">
+                    <div class="col-xs-4 col-sm-2 confirm-label">物資</div>
+                    <div class="col-xs-8 col-sm-10" id="items"></div>
+                </div>
+                <div class="row confirm-row">
+                    <div class="col-xs-4 col-sm-2 confirm-label">備註</div>
+                    <div class="col-xs-8 col-sm-10" id="remarks"></div>
+                </div>
+            </div>
+            <div class="panel-footer" id="button-panel">
+                <div class="row">
+                    <div class="col-xs-12">
+                        <button type="button" class="btn btn-default" id="back">返回</button>
+                        &nbsp;&nbsp;
+                        <button type="button" class="btn btn-primary" id="submit">提交</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="loading-overlay hidden" id="loading-overlay"></div>
+</body>
+</html>

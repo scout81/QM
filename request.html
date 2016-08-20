@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>HKG81 QM Dashboard</title>
+    <link rel="stylesheet" media="screen" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="css/bootstrap-datepicker3.min.css"/>
+    <link rel="stylesheet" type="text/css" href="css/main.css"/>
+
+    <script src="http://code.jquery.com/jquery-1.11.3.min.js" type="text/javascript"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" type="text/javascript"></script>
+    <script src="https://api.trello.com/1/client.js?key=8a42b4468e08ca9f165c88d1327add61"></script>
+    <script src="js/bootstrap-datepicker.min.js" type="text/javascript"></script>
+    <script src="js/Autolinker.min.js" type="text/javascript"></script>
+    <script src="js/main.js" type="text/javascript"></script>
+
+    <script type="text/javascript">
+        var cards = [];
+        var loadCards = function() {
+            trelloGet('/boards/'+Board+'/cards?checklists=all&actions=updateCheckItemStateOnCard',
+                showCards,
+                function() { failAlert("load cards fail"); }
+            );
+        };
+
+        var showCards = function(data) {
+            $('#loader').remove();
+            $('#requests').removeClass('hidden');
+
+            cards = data;
+            cards.sort( function(a, b) {
+                return b.name.localeCompare(a.name);
+            });
+
+            // Autolinker: utility to change url text to link
+            var autolinker = new Autolinker({
+                replaceFn : function(autolinker, match) {
+                    // Custom function to get Trello card's name from card url
+                    return cardUrlToName(autolinker, match, cards);
+                }
+            });
+
+            // Autolinker: utility to change url text to link
+            var urlRemover = new Autolinker({
+                replaceFn : function(autolinker, match) {
+                    // Custom function to remove card url
+                    return cardUrlRemove(autolinker, match, cards);
+                }
+            });
+
+            // Create a DOM for each card
+            $.each(cards, function(index, card) {
+                if (hasLabel(card, Label.borrowRec) || hasLabel(card, Label.repairRec)) {
+                    var dueDt = null;
+                    if (card.due != null)
+                        dueDt = new Date(card.due.substring(0,4), card.due.substring(5,7)-1, card.due.substring(8,10));
+
+                    // Check card status
+                    var pending = (card.idList == List.pending);
+                    var completed = (card.idList == List.completed);
+                    var overdue = (dueDt != null && dueDt < new Date() && card.badges.checkItemsChecked < card.badges.checkItems);
+                    var active = (!pending && !completed && !overdue);
+
+                    // Add classes for filtering
+                    var filterClass = '';
+                    if (pending)
+                        filterClass += ' filter-pending';
+                    if (completed)
+                        filterClass += ' filter-completed';
+                    if (overdue)
+                        filterClass += ' filter-overdue';
+                    if (active)
+                        filterClass += ' filter-active';
+
+                    // Label
+                    var label = '';
+                    if (overdue)
+                        label += '<span class="label st-label-large bg-overdue">逾時未還</span>';
+                    if (pending)
+                        label += '<span class="label st-label-large bg-pending">待處理</span>';
+                    if (active)
+                        label += '<span class="label st-label-large bg-active">進行中</span>';
+                    if (completed)
+                        label += '<span class="label st-label-large bg-completed">完成</span>';
+                    if (label != '')
+                        label = '<p>' + label + '</p>';
+
+                    // Format Description
+                    var desc = card.desc;
+                    desc = desc.replace(/\n\n\n/g, '<br>'); // \n\n\n -> <br>
+                    desc = desc.replace(/\n/g, '<br>'); // \n -> <br>
+                    if (hasLabel(card, Label.borrowRec)) {
+                        desc = urlRemover.link(desc); // url -> ''
+                    } else {
+                        desc = autolinker.link(desc); // url -> <a href="url">name</a>
+                    }
+                    desc = desc.replace(/(<br>)+/g, '<br>'); // <br><br><br> -> <br>
+                    desc = desc.replace(/-------<br>-------/g, '-------'); // <br><br><br> -> <br>
+
+                    // Checklist
+                    var checklist = '';
+                    if (card.checklists.length > 0) {
+                        for (var i = 0; i < card.checklists[0].checkItems.length; i++) {
+                            checklist += '<div>';
+                            if (card.checklists[0].checkItems[i].state == 'incomplete') {
+                                checklist += '<span class="glyphicon glyphicon-remove" aria-hidden="true" style="color: #d9534f"></span> ';
+                            } else {
+                                checklist += '<span class="glyphicon glyphicon-ok" aria-hidden="true" style="color: #5cb85c"></span> ';
+                            }
+                            checklist += autolinker.link(card.checklists[0].checkItems[i].name);
+                            if (card.checklists[0].checkItems[i].state == 'complete') {
+                                if (card.actions.length > 0) {
+                                    for (var j = 0; j < card.actions.length; j++) {
+                                        if (card.actions[j].type == 'updateCheckItemStateOnCard' &&
+                                            card.actions[j].data.checkItem.id == card.checklists[0].checkItems[i].id &&
+                                            card.actions[j].data.checkItem.state == 'complete') {
+                                            checklist += ' - <small style="color:#666;"><em>' + card.actions[j].date.substring(0,10) + '</em></small>';
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                            checklist += '</div>';
+                        }
+                    }
+
+                    var borrowDt = card.name.substring(0, 10);
+                    var dueDt = card.due.substring(0, 10);
+                    var activity = card.name.substring(12, card.name.length-1);
+
+                    // Build DOM
+                    var html = '<div class="col-xs-12 col-sm-6 col-md-4 '+filterClass+'">'+
+                               '<div id="'+card.shortLink+'" class="request">' +
+                               '<div class="request-header">' +
+                               label +
+                               '<strong>' + activity + '</strong>' +
+                               '<div class="request-subheader">' +
+                               '<span class="glyphicon glyphicon-time" aria-hidden="true"></span> ' + borrowDt + ' / ' + dueDt +
+                               '&nbsp;&nbsp;&nbsp;&nbsp;' +
+                               '<span class="glyphicon glyphicon-check" aria-hidden="true"></span> ' + card.badges.checkItemsChecked+'/'+card.badges.checkItems +
+                               '</div>' +
+                               '</div>' +
+                               '<div class="request-body">' +
+                               '<a href="request_adm.html?i='+card.shortLink+'" class="pull-right">Admin Mode</a><br/>' +
+                               desc +
+                               '</div>' +
+                               '<div class="request-body">' +
+                               '<h5><strong>清單:</strong></h5>' +
+                               checklist +
+                               '</div>' +
+                               '<div class="request-btn" data-status="close" >' +
+                               '<span class="glyphicon glyphicon-menu-down" aria-hidden="true"></span>' +
+                               '</div>' +
+                               '</div>' +
+                               '</div>';
+
+                    $('#requests').append(html);
+
+                    $('#'+card.shortLink+' .request-body').hide();
+
+                    $('#'+card.shortLink+' .request-btn').on('click', function() {
+                        var status = $(this).data('status');
+                        if (status == "close") {
+                            $('#'+card.shortLink+' .request-body').show('slow');
+                            $('#'+card.shortLink+' .request-btn .glyphicon').removeClass('glyphicon-menu-down');
+                            $('#'+card.shortLink+' .request-btn .glyphicon').addClass('glyphicon-menu-up');
+                            $(this).data('status', 'open');
+                        } else {
+                            $('#'+card.shortLink+' .request-body').hide('slow');
+                            $('#'+card.shortLink+' .request-btn .glyphicon').addClass('glyphicon-menu-down');
+                            $('#'+card.shortLink+' .request-btn .glyphicon').removeClass('glyphicon-menu-up');
+                            $(this).data('status', 'close');
+                        }
+                    });
+
+
+                }
+            });
+        }
+
+        $(function(){
+            trelloAuthorize(loadCards);
+			
+			$('#add-btn').on('click', function() {
+                window.location.href = "add.html";
+            });
+        });
+    </script>
+</head>
+<body>
+    <nav class="navbar navbar-default navbar-fixed-top">
+        <div class="container-fluid">
+            <div class="navbar-header">
+                <a class="navbar-brand" href="#">HKG81 QM</a>
+            </div>
+            <ul class="nav navbar-nav">
+                <li><a href="index.html">首頁</a></li>
+                <li class="active"><a href="request.html">借用申請</a></li>
+                <li><a href="list.html">物資清單</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+
+        <div class="alert hidden" role="alert" id="alert-box">
+            <span id="alert-msg"></span>
+        </div>
+
+        <p>
+            <button type="button" class="btn btn-info" id="add-btn">
+                <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> 新增借用申請
+            </button>
+        </p>
+
+        <div id="loader" style="text-align:center;">
+            <img src="img/loading.gif"/>
+        </div>
+        <div id="requests" class="row hidden"></div>
+        <div style="height: 100px">&nbsp;</div>
+    </div>
+
+</body>
+</html>

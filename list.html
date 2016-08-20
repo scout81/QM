@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>HKG81 QM Dashboard</title>
+    <link rel="stylesheet" media="screen" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="css/bootstrap-datepicker3.min.css"/>
+    <link rel="stylesheet" type="text/css" href="css/main.css"/>
+
+    <script src="http://code.jquery.com/jquery-1.11.3.min.js" type="text/javascript"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" type="text/javascript"></script>
+    <script src="https://api.trello.com/1/client.js?key=8a42b4468e08ca9f165c88d1327add61"></script>
+    <script src="js/bootstrap-datepicker.min.js" type="text/javascript"></script>
+    <script src="js/Autolinker.min.js" type="text/javascript"></script>
+    <script src="js/main.js" type="text/javascript"></script>
+
+    <script type="text/javascript">
+        var cards = [];
+        var loadCards = function() {
+            trelloGet('/boards/'+Board+'/cards?attachments=cover&checklists=all',
+                showCards,
+                function() { failAlert("load cards fail"); }
+            );
+        };
+
+        var showCards = function(data) {
+            $('#loader').remove();
+            $('.items').removeClass('hidden');
+
+            cards = data;
+            cards.sort( function(a, b) {
+                return a.name.localeCompare(b.name);
+            });
+
+            // Find out late items
+            var lateCardUrls = [];
+            $.each(cards, function(index, card) {
+                var dueDt = null;
+                if (card.due != null)
+                    dueDt = new Date(card.due.substring(0,4), card.due.substring(5,7)-1, card.due.substring(8,10));
+
+                if ( (hasLabel(card, Label.borrowRec) || hasLabel(card, Label.repairRec)) &&
+                        card.idList != List.pending && card.idList != List.completed &&
+                        dueDt != null && dueDt < new Date() &&
+                        card.badges.checkItemsChecked < card.badges.checkItems
+                        ) {
+                    if (card.checklists.length > 0) {
+                        for (var i = 0; i < card.checklists[0].checkItems.length; i++) {
+                            if (card.checklists[0].checkItems[i].state == 'incomplete') {
+                                lateCardUrls.push(card.checklists[0].checkItems[i].name);
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Autolinker: utility to change url text to link
+            var autolinker = new Autolinker({
+                replaceFn : function(autolinker, match) {
+                    // Custom function to get Trello card's name from card url
+                    return cardUrlReplace(autolinker, match, cards);
+                }
+            });
+            
+            var borrowed_count = 0;
+            var late_count = 0;
+            var repair_count = 0;
+            var drying_count = 0;
+            var damaged_count = 0;
+            var broken_count = 0;
+            
+            // Create a DOM for each card
+            $.each(cards, function(index, card) {
+                if (!hasLabel(card, Label.borrowRec) && !hasLabel(card, Label.repairRec)) {
+                    // Check card status
+                    var borrowed = isBorrowed(card);
+                    var late = ($.inArray(card.url, lateCardUrls) > -1);
+                    var repair = (card.idList == List.repair);
+                    var drying = (card.idList == List.drying);
+                    var damaged = hasLabel(card, Label.damaged);
+                    var broken = hasLabel(card, Label.broken);
+                    
+                    // Counter
+                    if (borrowed)
+                        borrowed_count++;
+                    if (late)
+                        late_count++;
+                    if (repair)
+                        repair_count++;
+                    if (drying)
+                        drying_count++;
+                    if (damaged)
+                        damaged_count++;
+                    if (broken)
+                        broken_count++;
+                    
+                    // Add classes for filtering
+                    var filterClass = '';
+                    if (borrowed)
+                        filterClass += ' filter-borrowed';
+                    if (late)
+                        filterClass += ' filter-late';
+                    if (repair)
+                        filterClass += ' filter-repair';
+                    if (drying)
+                        filterClass += ' filter-drying';
+                    if (damaged)
+                        filterClass += ' filter-damaged';
+                    if (broken)
+                        filterClass += ' filter-broken';
+                    if (!broken && !damaged && !drying && !repair && !late && !borrowed)
+                        filterClass += ' filter-available';
+
+                    // Add status label
+                    var status = '';
+                    if (broken)
+                        status += '<span class="st-label bg-broken pull-right">&nbsp;</span>';
+                    if (damaged)
+                        status += '<span class="st-label bg-damaged pull-right">&nbsp;</span>';
+                    if (drying)
+                        status += '<span class="st-label bg-drying pull-right">&nbsp;</span>';
+                    if (repair)
+                        status += '<span class="st-label bg-repair pull-right">&nbsp;</span>';
+                    if (late)
+                        status += '<span class="st-label bg-late pull-right">&nbsp;</span>';
+                    if (borrowed)
+                        status += '<span class="st-label bg-borrowed pull-right">&nbsp;</span>';
+                    if (!broken && !damaged && !drying && !repair && !late && !borrowed)
+                        status += '<span class="glyphicon glyphicon-option-vertical pull-right" aria-hidden="true" style="color: #cccccc;"></span>';
+
+
+                    // Build DOM
+                    var html = '<div class="items-card-container col-xs-12 col-sm-4 col-md-3 '+filterClass+'">'+
+                               '<div id="'+card.shortLink+'" class="items-card">' +
+                               card.name +
+                               status +
+                               '</div>' +
+                               '</div>';
+
+                    // Append DOM to DIV
+                    if (hasLabel(card, Label.tent)) {
+                        $('#tent-items').append(html);
+                    } else if (hasLabel(card, Label.yurt)) {
+                        $('#yurt-items').append(html);
+                    } else if (hasLabel(card, Label.tentpeg)) {
+                        $('#tentpeg-items').append(html);
+                    } else if (hasLabel(card, Label.fly)) {
+                        $('#fly-items').append(html);
+                    } else if (hasLabel(card, Label.cookset)) {
+                        $('#cookset-items').append(html);
+                    } else if (hasLabel(card, Label.stove)) {
+                        $('#stove-items').append(html);
+                    } else {
+                        $('#other-items').append(html);
+                    }
+
+                    $('#'+card.shortLink).on('click', function() {
+                        // cover
+                        var cover = '';
+                        if (card.attachments.length > 0) {
+                            console.log('att.url='+card.attachments[0].url);
+                            cover = //'<div class="item-modal-cover">'+
+                                    '<img src="'+card.attachments[0].url+'" class="img-responsive center-block" style="max-height: 200px;" />';
+                                    //'</div>';
+                            $('#item-modal-cover').html(cover);
+                            $('#item-modal-cover').removeClass('hidden');
+                        } else {
+                            $('#item-modal-cover').addClass('hidden');
+                        }
+
+                        // Label
+                        var label = '';
+                        if (borrowed)
+                            label += '<span class="label st-label-large bg-borrowed">借出</span>';
+                        if (late)
+                            label += '<span class="label st-label-large bg-late">逾時未還</span>';
+                        if (repair)
+                            label += '<span class="label st-label-large bg-repair">維修中</span>';
+                        if (drying)
+                            label += '<span class="label st-label-large bg-drying">晾曬中</span>';
+                        if (damaged)
+                            label += '<span class="label st-label-large bg-damaged">損壞</span>';
+                        if (broken)
+                            label += '<span class="label st-label-large bg-broken">不能使用</span>';
+                        if (label != '')
+                            label = '<p>' + label + '</p>';
+
+                        // Format Description
+                        var desc = card.desc;
+                        desc = desc.replace(/\n\n\n/g, '<br>'); // \n\n\n -> <br>
+                        desc = desc.replace(/\n/g, '<br>'); // \n -> <br>
+                        desc = autolinker.link(desc); // url -> <a href="url">url</a>
+
+                        $('#item-modal').modal('show');
+                        $('#item-modal-title').html(card.name);
+                        $('#item-modal-body').html(label+desc);
+                        $('#log-btn').data('shortLink', card.shortLink);
+                    });
+                }
+            });
+            
+            $('#badge-borrowed').html('('+borrowed_count+')');
+            $('#badge-late').html('('+late_count+')');
+            $('#badge-repair').html('('+repair_count+')');
+            $('#badge-drying').html('('+drying_count+')');
+            $('#badge-damaged').html('('+damaged_count+')');
+            $('#badge-broken').html('('+broken_count+')');
+            
+            cardsReady();
+        }
+        
+        var cardsReady = function() {
+            //
+            var status = urlParam('s');
+            if (status !== null) {
+                $(".status-toggle").prop('checked', false);
+                $("#toggle-"+status).prop('checked', true);
+                toggleFilterStatus();
+            }
+                        
+            var cardShortLink = urlParam('i');
+            if (cardShortLink !== null) {
+                $('#'+cardShortLink).triggerHandler('click');
+            }
+        }
+
+        var toggleFilterStatus = function() {
+            $('.items-card-container').hide();
+            $('.status-toggle:checked').each(function(index) {
+                var target = $(this).data('target');
+                $(target).show();
+            });
+            toggleFilterActive();
+        }
+
+        var toggleFilterType = function() {
+            $('.items').hide();
+            $('.type-toggle:checked').each(function(index) {
+                var target = $(this).data('target');
+                $(target).show();
+            });
+            toggleFilterActive();
+        }
+
+        var toggleFilterActive = function() {
+            if ($('.status-toggle').not(':checked').length > 0 || $('.type-toggle').not(':checked').length > 0) {
+                $('#filter-btn').addClass('filter-active');
+            } else {
+                $('#filter-btn').removeClass('filter-active');
+            }
+        }
+
+        var selectAll = function() {
+            var target = $(this).data('target');
+            $(target).prop('checked', true);
+            if (target == ".status-toggle")
+                toggleFilterStatus();
+            else
+                toggleFilterType();
+        }
+
+        var unselectAll = function() {
+            var target = $(this).data('target');
+            $(target).prop('checked', false);
+            if (target == ".status-toggle")
+                toggleFilterStatus();
+            else
+                toggleFilterType();
+        }
+
+        $(function(){
+            trelloAuthorize(loadCards);
+
+            $('#filter-modal .status-toggle:checkbox').on('change', toggleFilterStatus);
+            $('#filter-modal .type-toggle:checkbox').on('change', toggleFilterType);
+            $('#filter-modal .select-all').on('click', selectAll);
+            $('#filter-modal .unselect-all').on('click', unselectAll);
+            
+            $('#log-btn').on('click', function(){
+                window.location.href = 'log.html?i=' + $(this).data('shortLink');
+            });
+        });
+    </script>
+</head>
+<body>
+    <nav class="navbar navbar-default navbar-fixed-top">
+        <div class="container-fluid">
+            <div class="navbar-header">
+                <a class="navbar-brand" href="#">HKG81 QM</a>
+            </div>
+            <ul class="nav navbar-nav">
+                <li><a href="index.html">首頁</a></li>
+                <li><a href="request.html">借用申請</a></li>
+                <li class="active"><a href="list.html">物資清單</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+
+        <div class="alert hidden" role="alert" id="alert-box">
+            <span id="alert-msg"></span>
+        </div>
+
+        <div class="row" style="margin-bottom: 20px;">
+            <div class="st-label-key-container col-xs-9">
+                <span class="st-label-key text-nowrap"><span class="st-label bg-borrowed">&nbsp;</span>借出 <span id="badge-borrowed">(-)</span></span>
+                <span class="st-label-key text-nowrap"><span class="st-label bg-late">&nbsp;</span>逾時未還 <span id="badge-late">(-)</span></span>
+                <span class="st-label-key text-nowrap"><span class="st-label bg-repair">&nbsp;</span>維修中 <span id="badge-repair">(-)</span></span>
+                <span class="st-label-key text-nowrap"><span class="st-label bg-drying">&nbsp;</span>晾曬中 <span id="badge-drying">(-)</span></span>
+                <span class="st-label-key text-nowrap"><span class="st-label bg-damaged">&nbsp;</span>損壞 <span id="badge-damaged">(-)</span></span>
+                <span class="st-label-key text-nowrap"><span class="st-label bg-broken">&nbsp;</span>不能使用 <span id="badge-broken">(-)</span></span>
+            </div>
+            <div class="col-xs-3" style="text-align: right;">
+                <button type="button" id="filter-btn" class="btn btn-sm btn-link" data-toggle="modal" data-target="#filter-modal">
+                    <span class="glyphicon glyphicon-filter" aria-hidden="true"></span> 篩選
+                </button>
+            </div>
+        </div>
+
+        <div id="loader" style="text-align:center;">
+            <img src="img/loading.gif"/>
+        </div>
+        <div class="hidden items filter-tent">
+            <div class="items-title">A字營</div>
+            <div id="tent-items" class="row"></div>
+        </div>
+        <div class="hidden items filter-yurt">
+            <div class="items-title">蒙古包</div>
+            <div id="yurt-items" class="row"></div>
+        </div>
+        <div class="hidden items filter-tentpeg">
+            <div class="items-title">營釘</div>
+            <div id="tentpeg-items" class="row"></div>
+        </div>
+        <div class="hidden items filter-fly">
+            <div class="items-title">天幕</div>
+            <div id="fly-items" class="row"></div>
+        </div>
+        <div class="hidden items filter-cookset">
+            <div class="items-title">炊具</div>
+            <div id="cookset-items" class="row"></div>
+        </div>
+        <div class="hidden items filter-stove">
+            <div class="items-title">爐頭</div>
+            <div id="stove-items" class="row"></div>
+        </div>
+        <div class="hidden items filter-other">
+            <div class="items-title">其他</div>
+            <div id="other-items" class="row"></div>
+        </div>
+        <div style="height: 100px">&nbsp;</div>
+    </div>
+
+    <div id="item-modal" class="modal fade" tabindex="-1" role="dialog">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h4 id="item-modal-title" class="modal-title"></h4>
+                </div>
+                <div id="item-modal-cover" class="modal-body item-modal-cover hidden">
+                </div>
+                <div id="item-modal-body" class="modal-body">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default pull-left" id="log-btn" data-shortLink="">使用記錄</button>
+                    <button type="button" class="btn btn-default" data-dismiss="modal">關閉</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="filter-modal" class="modal fade" tabindex="-1" role="dialog">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title"><span class="glyphicon glyphicon-filter" aria-hidden="true"></span> 篩選</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-xs-6">
+                            <h5>狀態:</h5>
+                            <button type="button" class="btn btn-xs btn-link select-all" data-target=".status-toggle">全選</button>
+                            <button type="button" class="btn btn-xs btn-link unselect-all" data-target=".status-toggle">全部取消</button>
+                            <div class="checkbox">
+                                <label>
+                                    <input type="checkbox" id="toggle-available" class="status-toggle" data-target=".filter-available" checked>
+                                    <span class="label st-label-large bg-available">可借用</span>
+                                </label>
+                            </div>
+                            <div class="checkbox">
+                                <label>
+                                    <input type="checkbox" id="toggle-borrowed" class="status-toggle" data-target=".filter-borrowed" checked>
+                                    <span class="label st-label-large bg-borrowed">借出</span>
+                                </label>
+                            </div>
+                            <div class="checkbox">
+                                <label>
+                                    <input type="checkbox" id="toggle-late" class="status-toggle" data-target=".filter-late" checked>
+                                    <span class="label st-label-large bg-late">逾時未還</span>
+                                </label>
+                            </div>
+                            <div class="checkbox">
+                                <label>
+                                    <input type="checkbox" id="toggle-repair" class="status-toggle" data-target=".filter-repair" checked>
+                                    <span class="label st-label-large bg-repair">維修中</span>
+                                </label>
+                            </div>
+                            <div class="checkbox">
+                                <label>
+                                    <input type="checkbox" id="toggle-drying" class="status-toggle" data-target=".filter-drying" checked>
+                                    <span class="label st-label-large bg-drying">晾曬中</span>
+                                </label>
+                            </div>
+                            <div class="checkbox">
+                                <label>
+                                    <input type="checkbox" id="toggle-damaged" class="status-toggle" data-target=".filter-damaged" checked>
+                                    <span class="label st-label-large bg-damaged">損壞</span>
+                                </label>
+                            </div>
+                            <div class="checkbox">
+                                <label>
+                                    <input type="checkbox" id="toggle-broken" class="status-toggle" data-target=".filter-broken" checked>
+                                    <span class="label st-label-large bg-broken">不能使用</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-xs-6">
+                            <h5>類型:</h5>
+                            <button type="button" class="btn btn-xs btn-link select-all" data-target=".type-toggle">全選</button>
+                            <button type="button" class="btn btn-xs btn-link unselect-all" data-target=".type-toggle">全部取消</button>
+                            <div class="checkbox">
+                                <label>
+                                    <input type="checkbox" id="toggle-tent" class="type-toggle" data-target=".filter-tent" checked> A字營
+                                </label>
+                            </div>
+                            <div class="checkbox">
+                                <label>
+                                    <input type="checkbox" id="toggle-yurt" class="type-toggle" data-target=".filter-yurt" checked> 蒙古包
+                                </label>
+                            </div>
+                            <div class="checkbox">
+                                <label>
+                                    <input type="checkbox" id="toggle-tentpeg" class="type-toggle" data-target=".filter-tentpeg" checked> 營釘
+                                </label>
+                            </div>
+                            <div class="checkbox">
+                                <label>
+                                    <input type="checkbox" id="toggle-fly" class="type-toggle" data-target=".filter-fly" checked> 天幕
+                                </label>
+                            </div>
+                            <div class="checkbox">
+                                <label>
+                                    <input type="checkbox" id="toggle-cookset" class="type-toggle" data-target=".filter-cookset" checked> 炊具
+                                </label>
+                            </div>
+                            <div class="checkbox">
+                                <label>
+                                    <input type="checkbox" id="toggle-stove" class="type-toggle" data-target=".filter-stove" checked> 爐頭
+                                </label>
+                            </div>
+                            <div class="checkbox">
+                                <label>
+                                    <input type="checkbox" id="toggle-other" class="type-toggle" data-target=".filter-other" checked> 其他
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">關閉</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+</body>
+</html>
