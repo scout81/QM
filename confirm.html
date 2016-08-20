@@ -15,6 +15,7 @@
     <script src="https://api.trello.com/1/client.js?key=8a42b4468e08ca9f165c88d1327add61"></script>
     <script src="js/bootstrap-datepicker.min.js" type="text/javascript"></script>
     <script src="js/main.js" type="text/javascript"></script>
+    <script src="js/properties.js" type="text/javascript"></script>
 
     <script type="text/javascript">
         var param;
@@ -47,15 +48,15 @@
             $.each(param.items, function(index, item) {
                 itemUrls += item.url + "\n";
             });
-            
+
             var returnDtArray = param.return_dt.split("-");
-            
+
             var branchDesc;
             if (param.branch == 'scout')
                 branchDesc = '童軍';
             else if (param.branch == 'venture')
                 branchDesc = '深資童軍';
-                
+
             var newCard = {
                 name: param.borrow_dt + " [" + param.activity + "]",
                 desc: "支部: " + branchDesc + "\n" +
@@ -65,7 +66,7 @@
                       "活動: " + param.activity + "\n" +
                       "借用日期: " + param.borrow_dt + "\n" +
                       "歸還日期: " + param.return_dt + "\n" +
-                      "\n\n-------\n" + 
+                      "\n\n-------\n" +
                       itemUrls +
                       "\n\n-------\n" +
                       "備註: \n" + param.remarks,
@@ -118,7 +119,7 @@
 					var mailTo = ADMIN_EMAIL;
 					var mailCc = param.email;
 					var mailSubject = "[81st HKG] 物資借用申請 - " + param.activity;
-					var mailMessage = 
+					var mailMessage =
 						"<table>" +
 						"<tr><td><b>支部:</b></td><td>" + param.branch == 'scout' ? '童軍' : param.branch == 'venture' ? '深資童軍' : '' + "</td></tr>" +
 						"<tr><td><b>申請人:</b></td><td>" + param.applicant + "</td></tr>" +
@@ -128,27 +129,27 @@
 						"<tr><td><b>借用日期:</b></td><td>" + param.borrow_dt + "</td></tr>" +
 						"<tr><td><b>歸還日期:</b></td><td>" + param.return_dt + "</td></tr>" +
 						"<tr><td style='vertical-align: top;'><b>物資清單:</b></td><td>";
-					
+
 					$.each(param.items, function(index, item) {
 						mailMessage += item.name+'<br/>';
 					});
-						
+
 					mailMessage +=
 						"</td></tr>" +
-						"<tr><td style='vertical-align: top;'><b>備註:</b></td><td>" + 
+						"<tr><td style='vertical-align: top;'><b>備註:</b></td><td>" +
 						param.remarks.replace(/\n/g, '<br/>') +
 						"</td></tr>" +
 						"</table>";
-					
-					sendEmail(mailTo, mailCc, mailSubject, mailMessage, 
+
+					sendEmail(mailTo, mailCc, mailSubject, mailMessage,
 						function () {
 							showSuccess("<strong>成功! </strong>申請已完成。");
-						}, 
+						},
 						function () {
 							showError("<strong>錯誤: </strong>請重新提交申請。<br/>(Send Email Failed)");
 						}
 					);
-                    
+
                 }
             }
         }
@@ -174,7 +175,7 @@
             $('#loading-overlay').remove();
             $(".nav a").off("click", showConfirmation);
         }
-        
+
         var showConfirmation = function() {
             return confirm('申請未完成，確定要離開？');
         };
@@ -190,7 +191,7 @@
                 $('#confirm-container').hide();
                 showError("<strong>錯誤: </strong>請重新提交申請。<br>(Param is not existed.)");
             }
-			
+
 			$('#back').on('click', function() {
                 var param2 = encodeURIComponent(JSON.stringify(param));
                 window.location.href = "add.html?param="+param2;

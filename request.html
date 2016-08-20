@@ -16,6 +16,7 @@
     <script src="js/bootstrap-datepicker.min.js" type="text/javascript"></script>
     <script src="js/Autolinker.min.js" type="text/javascript"></script>
     <script src="js/main.js" type="text/javascript"></script>
+    <script src="js/properties.js" type="text/javascript"></script>
 
     <script type="text/javascript">
         var cards = [];
@@ -144,6 +145,7 @@
                                '</div>' +
                                '</div>' +
                                '<div class="request-body">' +
+                               '<a href="request_adm.html?i='+card.shortLink+'" class="pull-right">Admin Mode</a><br/>' +
                                desc +
                                '</div>' +
                                '<div class="request-body">' +
@@ -182,7 +184,7 @@
 
         $(function(){
             trelloAuthorize(loadCards);
-			
+
 			$('#add-btn').on('click', function() {
                 window.location.href = "add.html";
             });
