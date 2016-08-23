@@ -32,7 +32,7 @@ var Label = {
     yurt: '57b817e784e677fd36018cef',      // Label - 蒙古包
     tentpeg: '57b817e784e677fd36018cf1',   // Label - 營釘
     fly: '57b817e784e677fd36018cf0',       // Label - 天幕
-    cookset: '5781327284e677fd36740338',   // Label - Cookset
+    cookset: '57b817cc84e677fd36018cb4',   // Label - Cookset
     stove: '57b817cd84e677fd36018cb6',     // Label - 爐頭
     other: '57b817cd84e677fd36018cb5'      // Label - 其他
 };
