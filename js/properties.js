@@ -37,4 +37,4 @@ var Label = {
     other: '57b817cd84e677fd36018cb5'      // Label - 其他
 };
 
-var ADMIN_EMAIL = 'scout81@gmail.com';
+var ADMIN_EMAIL = 'scout81_leader@emaildodo.com';
