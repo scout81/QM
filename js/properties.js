@@ -27,7 +27,7 @@ var Label = {
     repairRec: '57b8186184e677fd36018d95', // Label - 維修記錄
     damaged: '57b817ce84e677fd36018cbd',   // Label - 損壞
     broken: '57b8180884e677fd36018d07',    // Label - 不能使用
-    cleaning: '5780d65784e677fd36737245',  // Label - 清洗中
+    cleaning: '57bbc561c004a341318a3bf4',  // Label - 清洗中
     tent: '57b817e684e677fd36018ce8',      // Label - A字營
     yurt: '57b817e784e677fd36018cef',      // Label - 蒙古包
     tentpeg: '57b817e784e677fd36018cf1',   // Label - 營釘
