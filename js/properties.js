@@ -38,7 +38,7 @@ var Label = {
     fly: '57b817e784e677fd36018cf0',       // Label - 天幕
     cookset: '57b817cc84e677fd36018cb4',   // Label - Cookset
     stove: '57b817cd84e677fd36018cb6',     // Label - 爐頭
-    other: '57b817cd84e677fd36018cb5'      // Label - 其他
+    other: '57b817cd84e677fd36018cb5',     // Label - 其他
 
     tent_tent: '57c52bd05b80891e728cac78', // Label - A字營 (營)
     tent_pole: '57c52bd82a182e156b9da236', // Label - A字營 (營柱)
