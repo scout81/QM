@@ -5,15 +5,15 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <title>HKG81 QM Dashboard</title>
+    <title>81st HKG QM Dashboard</title>
     <link rel="stylesheet" media="screen" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
-    <link rel="stylesheet" type="text/css" href="css/bootstrap-datepicker3.min.css"/>
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.6.4/css/bootstrap-datepicker.min.css"/>
     <link rel="stylesheet" type="text/css" href="css/main.css"/>
 
     <script src="https://code.jquery.com/jquery-1.11.3.min.js" type="text/javascript"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js" type="text/javascript"></script>
-    <script src="https://api.trello.com/1/client.js?key=8a42b4468e08ca9f165c88d1327add61"></script>
-    <script src="js/bootstrap-datepicker.min.js" type="text/javascript"></script>
+    <script src="https://api.trello.com/1/client.js?key=8a42b4468e08ca9f165c88d1327add61" type="text/javascript"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.6.4/js/bootstrap-datepicker.min.js" type="text/javascript"></script>
     <script src="js/main.js" type="text/javascript"></script>
     <script src="js/properties.js" type="text/javascript"></script>
 
@@ -24,15 +24,27 @@
         var loadedListCount = 0;
 
         var loadLists = function() {
+            /*
             for (var i = 0; i < List.inSchool.length; i++) {
                 trelloGet('/lists/'+List.inSchool[i]+'/cards',
                     concatLists,
                     function() { failAlert("load list "+List.inSchool[i]+" fail"); }
                 );
             }
+            */
+            trelloGet('/boards/'+Board+'/cards',
+                function(data) {
+                    cards = data;
+                    createItemCheckboxes();
+    
+                    $('#loader').remove();
+                    $('.items').removeClass('hidden');
+                },
+                function() { failAlert("load cards fail"); }
+            );
         };
 
-        var concatLists = function(lists) {
+        /*var concatLists = function(lists) {
             cards = cards.concat(lists);
 
             loadedListCount++;
@@ -42,7 +54,7 @@
                 $('#loader').remove();
                 $('.items').removeClass('hidden');
             }
-        };
+        };*/
 
         var createItemCheckboxes = function() {
             cards.sort( function(a, b) {
@@ -51,37 +63,56 @@
 
             $.each(cards, function(index, card) {
 
-                var checkbox = '<div class="col-xs-6 col-sm-4 col-md-3" style="padding-bottom: 5px;">';
-
-                // have Damaged Label
-                if (hasLabel(card, Label.damaged)) {
-                    checkbox += '<button type="button" class="btn btn-default items-btn" id="items-btn-'+card.shortLink+'" data-toggle="button" aria-pressed="false" autocomplete="off" data-target="#items-cb-'+card.shortLink+'">'+card.name+'<span class="st-label-small bg-damaged">&nbsp;</span></button>';
-                // have Broken Label
-                } else if (hasLabel(card, Label.broken)) {
-                    checkbox += '<button type="button" class="btn btn-default items-btn" id="items-btn-'+card.shortLink+'" data-toggle="button" aria-pressed="false" autocomplete="off" data-target="#items-cb-'+card.shortLink+'" disabled>'+card.name+'<span class="st-label-small bg-broken">&nbsp;</span></button>';
-                // Normal
-                } else {
-                    checkbox += '<button type="button" class="btn btn-default items-btn" id="items-btn-'+card.shortLink+'" data-toggle="button" aria-pressed="false" autocomplete="off" data-target="#items-cb-'+card.shortLink+'">'+card.name+'</button>';
-                }
-
-                checkbox += '<input type="checkbox" name="items" id="items-cb-'+card.shortLink+'" value="'+card.shortLink+'" class="hidden" data-name="'+card.name+'" data-url="'+card.url+'"/>';
-                checkbox += '</div>';
-
-
-                if (hasLabel(card, Label.tent)) {
-                    $('#tent-items').append(checkbox);
-                } else if (hasLabel(card, Label.yurt)) {
-                    $('#yurt-items').append(checkbox);
-                } else if (hasLabel(card, Label.tentpeg)) {
-                    $('#tentpeg-items').append(checkbox);
-                } else if (hasLabel(card, Label.fly)) {
-                    $('#fly-items').append(checkbox);
-                } else if (hasLabel(card, Label.cookset)) {
-                    $('#cookset-items').append(checkbox);
-                } else if (hasLabel(card, Label.stove)) {
-                    $('#stove-items').append(checkbox);
-                } else {
-                    $('#other-items').append(checkbox);
+                if (!hasLabel(card, Label.borrowRec) && !hasLabel(card, Label.repairRec)) {
+                    
+                    card.custom = {}; // To store custom varables
+                    card.custom = getAdditionalData(card); // Load additional data
+                    
+                    var checkbox = '';
+                    if (!hasLabel(card, Label.tent_pole) && !hasLabel(card, Label.tent_shelter)) {
+                    	checkbox = '<div class="col-xs-6 col-sm-4 col-md-3" style="padding-bottom: 5px;">';
+                    } else {
+                    	// Hide pole and shelter of A-Tent
+                    	checkbox = '<div class="col-xs-6 col-sm-4 col-md-3 hidden" style="padding-bottom: 5px;">';
+                    }
+                    
+                    var label = '';
+                    var disabled = '';
+                    if (hasLabel(card, Label.damaged))
+                        label = '<span class="st-label-small bg-damaged">&nbsp;</span>';
+                    else if (hasLabel(card, Label.broken)) {
+                        label = '<span class="st-label-small bg-broken">&nbsp;</span>';
+                        disabled = 'disabled';
+                    }
+                    
+                    var target = '';
+                    if (hasLabel(card, Label.tent_tent)) {
+                    	// When select A-Tent, its pole and shelter will also selected
+                    	target = '#items-cb-'+card.shortLink+' ,#items-cb-'+card.custom.pole+' ,#items-cb-'+card.custom.shelter;
+                    } else {
+                    	target = '#items-cb-'+card.shortLink;
+                    }
+    
+                    checkbox += '<button type="button" class="btn btn-default items-btn" id="items-btn-'+card.shortLink+'" data-toggle="button" aria-pressed="false" autocomplete="off" data-target="'+target+'" '+disabled+'>'+ card.name + label +'</button>';
+                    checkbox += '<input type="checkbox" name="items" id="items-cb-'+card.shortLink+'" value="'+card.shortLink+'" class="hidden" data-name="'+card.name+'" data-url="'+card.url+'"/>';
+                    checkbox += '</div>';
+    
+    
+                    if (hasLabel(card, Label.tent)) {
+                        $('#tent-items').append(checkbox);
+                    } else if (hasLabel(card, Label.yurt)) {
+                        $('#yurt-items').append(checkbox);
+                    } else if (hasLabel(card, Label.tentpeg)) {
+                        $('#tentpeg-items').append(checkbox);
+                    } else if (hasLabel(card, Label.fly)) {
+                        $('#fly-items').append(checkbox);
+                    } else if (hasLabel(card, Label.cookset)) {
+                        $('#cookset-items').append(checkbox);
+                    } else if (hasLabel(card, Label.stove)) {
+                        $('#stove-items').append(checkbox);
+                    } else {
+                        $('#other-items').append(checkbox);
+                    }
                 }
 
             });
@@ -115,7 +146,19 @@
 
             // Check required
             $('[required]').each(function(index){
-                if ($(this).is(':text, [type=email]')) {
+                if ($(this).is('.datepicker')) {
+                    var helpBlock = '<span class="help-block">必須填上。</span>';
+                    if ($(this).val() == "") {
+                        $(this).closest('.form-group').addClass('has-error');
+                        if ($(this).closest('.input-group').next('.help-block').length == 0) {
+                            $(this).closest('.input-group').after(helpBlock);
+                        }
+                        isValid = false;
+                    } else {
+                        $(this).closest('.form-group').removeClass('has-error');
+                        $(this).closest('.input-group').next('.help-block').remove();
+                    }
+                } else if ($(this).is(':text, [type=email]')) {
                     var helpBlock = '<span class="help-block">必須填上。</span>';
                     if ($(this).val() == "") {
                         $(this).closest('.form-group').addClass('has-error');
@@ -185,14 +228,14 @@
                 if (returnDt.getTime() >= borrowDt.getTime()) {
                     $('#borrow_dt').closest('.form-group').removeClass('has-error');
                     $('#return_dt').closest('.form-group').removeClass('has-error');
-                    $('#borrow_dt').next('.help-block').remove();
+                    $('#borrow_dt').closest('.input-group').next('.help-block').remove();
                 } else {
                     var helpBlock = '<span class="help-block">借用日期必須在歸還日期之前。</span>';
                     $('#borrow_dt').closest('.form-group').addClass('has-error');
                     $('#return_dt').closest('.form-group').addClass('has-error');
 
-                    if ($('#borrow_dt').next('.help-block').length == 0) {
-                        $('#borrow_dt').after(helpBlock);
+                    if ($('#borrow_dt').closest('.input-group').next('.help-block').length == 0) {
+                        $('#borrow_dt').closest('.input-group').after(helpBlock);
                     }
                     isValid = false;
                 }
@@ -282,6 +325,11 @@
         }
 
         $(function(){
+            $(".input-group.date").datepicker({
+                format: 'yyyy-mm-dd',
+                autoclose: true
+            });
+            
             $("#next").on("click", function() {
                 if (validateFrom())
                     serializeFormAndSubmit();
@@ -298,7 +346,7 @@
     <nav class="navbar navbar-default navbar-fixed-top">
         <div class="container-fluid">
             <div class="navbar-header">
-                <a class="navbar-brand" href="#">HKG81 QM</a>
+                <a class="navbar-brand" href="#">81st HKG QM</a>
             </div>
             <ul class="nav navbar-nav">
                 <li><a href="index.html">首頁</a></li>
@@ -357,13 +405,23 @@
                     <div class="form-group">
                         <label for="borrow_dt" class="control-label col-xs-4 col-sm-2">借用日期</label>
                         <div class="col-xs-8 col-sm-10">
-                            <input type="text" name="borrow_dt" id="borrow_dt" class="form-control datepicker" placeholder="yyyy-mm-dd" value="" required/>
+                            <div class="input-group date" data-provide="datepicker" data-date-format="yyyy-mm-dd">
+                                <input type="text" name="borrow_dt" id="borrow_dt" class="form-control datepicker" placeholder="yyyy-mm-dd" value="" readonly required/>
+                                <div class="input-group-addon">
+                                    <span class="glyphicon glyphicon-calendar"></span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="form-group">
                         <label for="return_dt" class="control-label col-xs-4 col-sm-2">歸還日期</label>
                         <div class="col-xs-8 col-sm-10">
-                            <input type="text" name="return_dt" id="return_dt" class="form-control datepicker" placeholder="yyyy-mm-dd" value="" required/>
+                            <div class="input-group date" data-provide="datepicker" data-date-format="yyyy-mm-dd">
+                                <input type="text" name="return_dt" id="return_dt" class="form-control datepicker" placeholder="yyyy-mm-dd" value="" readonly required/>
+                                <div class="input-group-addon">
+                                    <span class="glyphicon glyphicon-calendar"></span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="form-group">

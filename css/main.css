@@ -2,29 +2,29 @@
  * Status Label
  *****************************/
 .st-label {
-	width: 5px;
-	margin: 0 4px;
-	display: inline-block;
+    width: 5px;
+    margin: 0 4px;
+    display: inline-block;
 }
 
 .st-label-small {
-	width: 5px;
-	margin: 0 0 0 10px;
-	display: inline-block;
+    width: 5px;
+    margin: 0 0 0 10px;
+    display: inline-block;
 }
 
 .st-label-large {
-	margin-right: 10px;
+    margin-right: 10px;
 }
 
 .st-label-key {
-	padding-right: 15px;
+    padding-right: 15px;
 }
 
 .st-label-key-container {
     font-size: 10px;
-	color: #666;
-	padding-top: 6px;
+    color: #666;
+    padding-top: 6px;
     padding-bottom: 6px;
 }
 
@@ -32,47 +32,47 @@
  * Background Color
  *****************************/
 .bg-borrowed {
-	background-color: #5cb85c;
+    background-color: #5cb85c;
 }
 
 .bg-damaged {
-	background-color: #d9534f;
+    background-color: #d9534f;
 }
 
 .bg-broken {
-	background-color: #666666;
+    background-color: #666666;
 }
 
 .bg-late {
-	background-color: #f0ad4e;
+    background-color: #f0ad4e;
 }
 
 .bg-drying {
-	background-color: #5bc0de;
+    background-color: #5bc0de;
 }
 
 .bg-repair {
-	background-color: #aa6708;
+    background-color: #aa6708;
 }
 
 .bg-available {
-	background-color: #337ab7;
+    background-color: #337ab7;
 }
 
 .bg-pending {
-	background-color: #5bc0de;
+    background-color: #5bc0de;
 }
 
 .bg-completed {
-	background-color: #337ab7;
+    background-color: #337ab7;
 }
 
 .bg-overdue {
-	background-color: #d9534f;
+    background-color: #d9534f;
 }
 
 .bg-active {
-	background-color: #5cb85c;
+    background-color: #5cb85c;
 }
 
 .bg-request {
@@ -84,38 +84,71 @@
  * Text Color
  *****************************/
 .txt-in {
-	color: #5cb85c;
+    color: #5cb85c;
 }
 
 .txt-out {
-	color: #d9534f;
+    color: #d9534f;
 }
 
 .txt-drying {
-	color: #5bc0de;
+    color: #5bc0de;
 }
 
 .txt-repair {
-	color: #aa6708;
+    color: #aa6708;
 }
 
 .txt-comment {
-	color: #337ab7;
+    color: #337ab7;
 }
 
 .txt-overdue {
-	color: #d9534f;
+    color: #d9534f;
+}
+
+.txt-borrowed.active, .txt-borrowed.active:hover, .txt-borrowed.active:focus, .txt-borrowed:hover {
+    color: #337ab7;
+}
+
+.txt-returned.active, .txt-returned.active:hover, .txt-returned.active:focus, .txt-returned:hover {
+    color: #5cb85c;
+}
+
+.txt-remove.active, .txt-remove.active:hover, .txt-remove.active:focus, .txt-remove:hover {
+    color: #d9534f;
+}
+
+.txt-normal.active, .txt-normal.active:hover, .txt-normal.active:focus, .txt-normal:hover {
+    color: #333;
+}
+
+.txt-borrowed, .txt-borrowed:focus,  
+.txt-returned, .txt-returned:focus, 
+.txt-remove, .txt-remove:focus, 
+.txt-normal, .txt-normal:focus {
+    color: #999;
+}
+
+.txt-borrowed[disabled], .txt-borrowed[disabled]:focus, .txt-borrowed[disabled]:hover,  
+.txt-returned[disabled], .txt-returned[disabled]:focus, .txt-returned[disabled]:hover, 
+.txt-remove[disabled], .txt-remove[disabled]:focus, .txt-remove[disabled]:hover, 
+.txt-normal[disabled], .txt-normal[disabled]:focus, .txt-normal[disabled]:hover {
+    color: #bbb;
 }
 
 /*****************************
  * Confirm form @confirm.html
  *****************************/
+#confirm-container {
+	position: relative;
+}
 .confirm-label {
-	font-weight: 700;
+    font-weight: 700;
 }
 
 .confirm-row {
-	padding-bottom: 5px;
+    padding-bottom: 5px;
 }
 
 /*****************************
@@ -144,25 +177,25 @@
 }
 
 .items-card {
-	color: #333;
-	font-weight: 400;
-	margin-bottom: 20px;
+    color: #333;
+    font-weight: 400;
+    margin-bottom: 20px;
     border: 1px solid #ddd;
-	padding: 15px;
+    padding: 15px;
     -webkit-box-shadow: 0 3px 2px rgba(0,0,0,.05);
     box-shadow: 0 3px 2px rgba(0,0,0,.05);
     cursor: pointer;
 }
 
 .items-card, .items-card:focus {
-	color: #333;
-	background-color: #fff;
+    color: #333;
+    background-color: #fff;
 }
 
 .items-card:hover {
-	color: #333;
-	background-color: #eee;
-	border: 1px solid #ccc;
+    color: #333;
+    background-color: #eee;
+    border: 1px solid #ccc;
 }
 
 /*****************************
@@ -196,9 +229,9 @@
  * Request @request.html
  *****************************/
 .request {
-	color: #333;
-	font-weight: 400;
-	margin-bottom: 20px;
+    color: #333;
+    font-weight: 400;
+    margin-bottom: 20px;
     -webkit-box-shadow: 0 3px 2px rgba(0,0,0,.05);
     box-shadow: 0 3px 2px rgba(0,0,0,.05);
 }
@@ -213,8 +246,14 @@
 
 .request-subheader {
     padding-top: 8px; 
-	font-size: 12px;
-	color: #666;
+    font-size: 12px;
+    color: #666;
+}
+
+.request-subheader-grp {
+    display: inline-block;
+    margin-right: 20px;
+    white-space: nowrap;
 }
 
 .request-body {
@@ -238,14 +277,14 @@
 }
 
 .request-btn, .request-btn:focus {
-	color: #999;
-	background-color: #fff;
+    color: #999;
+    background-color: #fff;
 }
 
 .request-btn:hover {
-	color: #333;
-	background-color: #eee;
-	border-color: #ccc;
+    color: #333;
+    background-color: #eee;
+    border-color: #ccc;
 }
 
 .request-footer {
@@ -262,6 +301,26 @@
 .request-items .request-body {
     border-top: 1px solid transparent;
     border-bottom: 1px solid #ddd;
+}
+
+.request-ctrl-btn {
+    font-size: 20px;
+    background-color: transparent;
+    border-color: transparent;
+}
+
+.request-ctrl-btn:hover, .request-ctrl-btn:focus {
+    background-color: transparent;
+    border-color: transparent;
+}
+
+.request-ctrl-btn.active {
+    -webkit-box-shadow: none;
+    box-shadow: none;
+}
+
+.request-ctrl-btn.unclickable {
+    pointer-events: none;
 }
 
 /*****************************
@@ -354,6 +413,12 @@
     position: relative;
     min-height: 72px;
 }
+/*****************************
+ * Process Box @request_adm.html
+ *****************************/
+.process-box {
+    font-size: 12px;
+}
 
 /*****************************
  * Progress Bar @request_adm.html
@@ -420,14 +485,18 @@
     box-shadow: none;
     background-color: #dfdfdf;
     margin: 20px 0;
-    left: 16.67%; 
-    width: 66.67%;
+    left: 12.5%; 
+    width: 75%;
     top: 15px;
 }
 
 .bs-wizard > .progress > .progress-bar {
     width:0px; 
     box-shadow: none; 
+}
+
+.bs-wizard > .bs-wizard-step > .unclickable {
+    pointer-events: none;
 }
 /*
 .bs-wizard > .bs-wizard-step > .progress { 
@@ -517,6 +586,23 @@
     border-color: #fff;
     left: 20px;
 }
+
+.affix {
+	z-index: 500;
+    min-width: 300px;
+    left: 50%;
+    transform: translateX(-50%);
+    -webkit-box-shadow: 4px 6px 10px -5px #999;
+    -moz-box-shadow: 4px 6px 10px -5px #999;
+    box-shadow: 4px 6px 10px -5px #999;
+    
+}
+
+/*.affix > .alert {
+    -webkit-box-shadow: 4px 6px 10px -5px #999;
+    -moz-box-shadow: 4px 6px 10px -5px #999;
+    box-shadow: 4px 6px 10px -5px #999;
+}*/
 
 /**************************************
  **************************************
@@ -618,7 +704,7 @@ body {
 }
 
 @media (min-width: 768px) {
-	.modal-dialog {
-	    margin: 70px auto;
-	}
+    .modal-dialog {
+        margin: 70px auto;
+    }
 }

@@ -5,15 +5,13 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <title>HKG81 QM Dashboard</title>
+    <title>81st HKG QM Dashboard</title>
     <link rel="stylesheet" media="screen" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
-    <link rel="stylesheet" type="text/css" href="css/bootstrap-datepicker3.min.css"/>
     <link rel="stylesheet" type="text/css" href="css/main.css"/>
 
     <script src="https://code.jquery.com/jquery-1.11.3.min.js" type="text/javascript"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" type="text/javascript"></script>
-    <script src="https://api.trello.com/1/client.js?key=8a42b4468e08ca9f165c88d1327add61"></script>
-    <script src="js/bootstrap-datepicker.min.js" type="text/javascript"></script>
+    <script src="https://api.trello.com/1/client.js?key=8a42b4468e08ca9f165c88d1327add61" type="text/javascript"></script>
     <script src="js/Autolinker.min.js" type="text/javascript"></script>
     <script src="js/main.js" type="text/javascript"></script>
     <script src="js/properties.js" type="text/javascript"></script>
@@ -111,8 +109,8 @@
 
             if (cardShortLink !== null) {
                 trelloAuthorize(function() {
-					loadcard(cardShortLink);
-				});
+                    loadcard(cardShortLink);
+                });
             } else {
                 $('#loader').remove();
                 failAlert("<strong>錯誤: </strong>Card ID is not existed.");
@@ -128,7 +126,7 @@
     <nav class="navbar navbar-default navbar-fixed-top">
         <div class="container-fluid">
             <div class="navbar-header">
-                <a class="navbar-brand" href="#">HKG81 QM</a>
+                <a class="navbar-brand" href="#">81st HKG QM</a>
             </div>
             <ul class="nav navbar-nav">
                 <li><a href="index.html">首頁</a></li>

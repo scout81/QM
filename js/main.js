@@ -11,9 +11,9 @@ function trelloAuthorize(done, fail) {
     if (USE_PROXY) {
         done();
     } else {
-		warningAlert("<strong>Warning: </strong>Authorize Failed.<br>" +
-			"Please get the authorization in the popup.");
-    	Trello.authorize({
+        warningAlert("<strong>Warning: </strong>Authorize Failed.<br>" +
+            "Please get the authorization in the popup.");
+        Trello.authorize({
             type: "popup",
             name: "HKG81 QM",
             scope: {
@@ -22,15 +22,15 @@ function trelloAuthorize(done, fail) {
             //expiration: "never",
             expiration: "30days",
             success: function() {
-				$("#alert-box").addClass("hidden");
-				$("#alert-box").removeClass("alert-warning");
-				done();
-			},
+                $("#alert-box").addClass("hidden");
+                $("#alert-box").removeClass("alert-warning");
+                done();
+            },
             error: function() {
-				$('#loader').remove();
-				failAlert("<strong>錯誤: </strong>Authorize Failed.");
-				fail();
-			}
+                $('#loader').remove();
+                failAlert("<strong>錯誤: </strong>Authorize Failed.");
+                fail();
+            }
         });
     }
 }
@@ -42,14 +42,14 @@ function trelloGet(url, done, fail) {
             "method": "get"
         })
         .done( function(data) {
-			if (data.hasAccess === false) {
-				$('#loader').remove();
-				failAlert("<strong>錯誤: </strong>Authorize Failed.<br>" +
-					"Please get the authorization <a href='"+data.authorizationUrl+"' target='_blank'>here</a> and then re-run this page.");
-			} else {
-				done(data);
-			}
-		})
+            if (data.hasAccess === false) {
+                $('#loader').remove();
+                failAlert("<strong>錯誤: </strong>Authorize Failed.<br>" +
+                    "Please get the authorization <a href='"+data.authorizationUrl+"' target='_blank'>here</a> and then re-run this page.");
+            } else {
+                done(data);
+            }
+        })
         .fail(fail);
     } else {
         Trello.get(url, done, fail);
@@ -70,35 +70,75 @@ function trelloPost(url, data, done, fail) {
     }
 }
 
+function trelloPut(url, data, done, fail) {
+    if (USE_PROXY) {
+        $.get(APPSCRIPT_URL, {
+            "trello_url": url,
+            "method": "put",
+            "data": JSON.stringify(data)
+        })
+        .done(done)
+        .fail(fail);
+    } else {
+       Trello.put(url, data, done, fail);
+    }
+}
+
+function trelloDelete(url, done, fail) {
+    if (USE_PROXY) {
+        $.get(APPSCRIPT_URL, {
+            "trello_url": url,
+            "method": "delete"
+        })
+        .done(done)
+        .fail(fail);
+    } else {
+       Trello.del(url, data, done, fail);
+    }
+}
+
 function sendEmail(to, cc, subject, message, done, fail) {
-	$.get(APPSCRIPT_URL, {
-		"method": "email",
-		"to": to,
-		"cc": cc,
-		"subject": subject,
-		"message": message
-	})
-	.done(done)
+    $.get(APPSCRIPT_URL, {
+        "method": "email",
+        "to": to,
+        "cc": cc,
+        "subject": subject,
+        "message": message
+    })
+    .done(done)
     .fail(fail);
 }
 
 function successAlert(msg) {
     $("#alert-box").removeClass("hidden");
-    $("#alert-box").addClass("alert-success");
+    $("#alert-box")
+    	.addClass("alert-success")
+    	.removeClass("alert-danger")
+    	.removeClass("alert-warning");
     $("#alert-msg").html(msg);
 }
 
 function failAlert(msg) {
     console.log("FAIL - " + msg);
     $("#alert-box").removeClass("hidden");
-    $("#alert-box").addClass("alert-danger");
+    $("#alert-box")
+    	.addClass("alert-danger")
+    	.removeClass("alert-success")
+    	.removeClass("alert-warning");
     $("#alert-msg").html(msg);
 }
 
 function warningAlert(msg) {
     $("#alert-box").removeClass("hidden");
-    $("#alert-box").addClass("alert-warning");
+    $("#alert-box")
+    	.addClass("alert-warning")
+    	.removeClass("alert-danger")
+    	.removeClass("alert-success");
     $("#alert-msg").html(msg);
+}
+
+$.wait = function(milliseconds, callback){
+    return window.setTimeout(callback, milliseconds);
 }
 
 function hasLabel(card, Label) {
@@ -150,21 +190,39 @@ function urlParam(name, url) {
     return decodeURIComponent(results[2].replace(/\+/g, " "));
 }
 
+// Additional Data is stored in Description
+// wrapping by three backticks (```) at the end
+// in JSON format
+function getAdditionalData(card) {
+	var desc = card.desc;
+    var array = desc.split('```');
+    if (array.length >= 2) {
+    	return JSON.parse(array[1]);
+    }
+    return {};
+}
+
+function getDesc(card) {
+	var desc = card.desc;
+    var array = desc.split('```');
+    if (array.length >= 1) {
+    	return array[0];
+    }
+    return '';
+}
+
 function isEmail(email) {
     var regex = /^([a-zA-Z0-9_.+-])+\@(([a-zA-Z0-9-])+\.)+([a-zA-Z0-9]{2,4})+$/;
     return regex.test(email);
 }
 
-$(function(){
-    $(".datepicker").datepicker({
-        format: 'yyyy-mm-dd',
-        autoclose: true
-    });
-});
-
 function dateFormat(date) {
     return date.getFullYear()+'-'+leadingZero(date.getMonth()+1)+'-'+leadingZero(date.getDate())+' '
         +leadingZero(date.getHours())+':'+leadingZero(date.getMinutes())+':'+leadingZero(date.getSeconds());
+}
+
+function dateFormat_ymd(date) {
+    return date.getFullYear()+'-'+leadingZero(date.getMonth()+1)+'-'+leadingZero(date.getDate());
 }
 
 function leadingZero(n) {
@@ -179,7 +237,7 @@ function cardUrlReplace(autolinker, match, cards) {
             var anchorText = match.getAnchorText().split('/');
             if (anchorText[0] == 'trello.com' && anchorText[1] == 'c') {
                 //return '<a href="'+match.getUrl()+'">'+getCardNameByUrl(cards, match.getUrl())+'</a>';
-                return '<a href="javascript: $(\'#'+anchorText[2]+'\').triggerHandler(\'click\');">'+getCardNameByUrl(cards, match.getUrl())+'</a>';
+                return '<a href="javascript: $(\'#'+anchorText[2]+'\').triggerHandler(\'click\');">'+getCardNameByShortLink(cards, anchorText[2])+'</a>';
             } else {
                 return true;
             }
@@ -204,7 +262,7 @@ function cardUrlToName(autolinker, match, cards) {
         case 'url' :
             var anchorText = match.getAnchorText().split('/');
             if (anchorText[0] == 'trello.com' && anchorText[1] == 'c') {
-                return getCardNameByUrl(cards, match.getUrl());
+                return getCardNameByShortLink(cards, anchorText[2]);
             } else {
                 return true;
             }
@@ -256,3 +314,239 @@ function getCardNameByUrl(cards, url) {
     }
     return url;
 }
+
+function getCardNameByShortLink(cards, shortLink) {
+    for (var i = 0; i < cards.length; i++) {
+        if (cards[i].shortLink == shortLink) {
+            return cards[i].name;
+        }
+    }
+    return url;
+}
+
+function getCardByUrl(cards, url) {
+    for (var i = 0; i < cards.length; i++) {
+        if (cards[i].url == url) {
+            return cards[i];
+        }
+    }
+    return null;
+}
+
+function getListNameById(lists, id) {
+    for (var i = 0; i < lists.length; i++) {
+        if (lists[i].id == id) {
+            return lists[i].name;
+        }
+    }
+    return id;
+};
+
+function getLateItems(cards) {
+    // Find out late items
+    var lateCardUrls = [];
+    $.each(cards, function(index, card) {
+        var dueDt = null;
+        if (card.due != null)
+            dueDt = new Date(card.due);
+
+        if ( (hasLabel(card, Label.borrowRec) || hasLabel(card, Label.repairRec)) &&
+                card.idList != List.pending && card.idList != List.completed &&
+                dueDt != null && dueDt < new Date() &&
+                card.badges.checkItemsChecked < card.badges.checkItems
+                ) {
+            if (card.checklists.length > 0) {
+                for (var i = 0; i < card.checklists[0].checkItems.length; i++) {
+                    if (card.checklists[0].checkItems[i].state == 'incomplete') {
+                        lateCardUrls.push(card.checklists[0].checkItems[i].name);
+                    }
+                }
+            }
+        }
+    });
+    return lateCardUrls;
+}
+
+function getBorrowDate(card) {
+    //return card.name.substring(0, 10);
+    var str = card.name;
+    str = str.replace(/\] \[/g, '|');
+    str = str.replace(/\[/g, '');
+    str = str.replace(/\]/g, '');
+    var array = str.split('|');
+    if (array.length >= 1)
+        return array[0];
+    else
+        return null;
+}
+
+function getActivity(card) {
+    //return card.name.substring(12, card.name.length-1);
+    var str = card.name;
+    str = str.replace(/\] \[/g, '|');
+    str = str.replace(/\[/g, '');
+    str = str.replace(/\]/g, '');
+    var array = str.split('|');
+    if (array.length >= 2)
+        return array[1];
+    else
+        return null;
+}
+
+function getApplicant(card) {
+    var str = card.name;
+    str = str.replace(/\] \[/g, '|');
+    str = str.replace(/\[/g, '');
+    str = str.replace(/\]/g, '');
+    var array = str.split('|');
+    if (array.length >= 3)
+        return array[2];
+    else
+        return null;
+}
+
+/*******************
+ * Process Box
+ ******************/
+var processCount = 0;
+
+function startProcess(msg, display) {
+    processCount++;
+    $('#process-msg').append('<div id="process-'+processCount+'" class="process running">'+msg+'</div>');
+    if (display !== false)
+    	$('#process-box').removeClass('hidden');
+    return processCount;
+}
+
+function finishProcess(pid) {
+    $('#process-'+pid)
+       .removeClass('running')
+       .addClass('finish')
+       .append(' - <strong>Completed</strong>.');
+}
+
+function failProcess(pid) {
+    $('#process-'+pid)
+       .removeClass('running')
+       .addClass('fail')
+       .append(' - <strong>Fail</strong>.');
+    $('#process-box')
+        .removeClass('alert-warning')
+        .addClass('alert-danger');
+}
+
+function clearProcess() {
+	$.wait(3000, function() {
+        if ($('.process.running').length <= 0 && $('.process.fail').length <= 0) {
+            $('.process.finish').remove();
+            $('#process-box').addClass('hidden');
+        }
+    });
+}
+
+function completeProcess() {
+	if ($('.process.running').length <= 0 && $('.process.fail').length <= 0) {
+        $('#process-box')
+        	.removeClass('alert-warning')
+        	.addClass('alert-success');
+    }
+}
+
+/*******************
+ * Fix Affix Width
+ * Usage:
+ *  <div data-clampedwidth=".myParent">This long content will force clamped width</div>
+ *
+ ******************/
+/*
+$(function(){
+	$('[data-clampedwidth]').each(function () {
+	    var elem = $(this);
+	    var parentPanel = elem.data('clampedwidth');
+	    var resizeFn = function () {
+	        var sideBarNavWidth = $(parentPanel).width() - parseInt(elem.css('paddingLeft')) - parseInt(elem.css('paddingRight')) - parseInt(elem.css('marginLeft')) - parseInt(elem.css('marginRight')) - parseInt(elem.css('borderLeftWidth')) - parseInt(elem.css('borderRightWidth'));
+	        console.log('$(parentPanel).width()='+$(parentPanel).width());
+	        console.log('elem.css(paddingLeft)='+elem.css('paddingLeft'));
+	        console.log('elem.css(paddingRight)='+elem.css('paddingRight'));
+	        console.log('elem.css(marginLeft)='+elem.css('marginLeft'));
+	        console.log('elem.css(marginRight)='+elem.css('marginRight'));
+	        console.log('elem.css(borderLeftWidth)='+elem.css('borderLeftWidth'));
+	        console.log('elem.css(borderRightWidth)='+elem.css('borderRightWidth'));
+	        elem.css('width', sideBarNavWidth);
+	    };
+	
+	    resizeFn();
+	    $(window).resize(resizeFn);
+	});
+});
+*/
+/*******************
+ * Progress Bar
+ ******************/
+function updateProgressIcon() {
+    $('.bs-wizard-step.disabled .glyphicon').removeClass('glyphicon-arrow-right').removeClass('glyphicon-ok');
+    $('.bs-wizard-step.active .glyphicon').addClass('glyphicon-arrow-right').removeClass('glyphicon-ok');
+    $('.bs-wizard-step.overdue .glyphicon').addClass('glyphicon-arrow-right').removeClass('glyphicon-ok');
+    $('.bs-wizard-step.complete .glyphicon').removeClass('glyphicon-arrow-right').addClass('glyphicon-ok');
+}
+
+function updateProgressStatus(progress_step, status) {
+    if (status == 'disabled')
+        $(progress_step).addClass('disabled').removeClass('active').removeClass('overdue').removeClass('complete');
+    else if (status == 'active')
+        $(progress_step).removeClass('disabled').addClass('active').removeClass('overdue').removeClass('complete');
+    else if (status == 'overdue')
+        $(progress_step).removeClass('disabled').removeClass('active').addClass('overdue').removeClass('complete');
+    else if (status == 'complete')
+        $(progress_step).removeClass('disabled').removeClass('active').removeClass('overdue').addClass('complete');
+}
+
+function updateOverdueStatus(element) {
+    if ($(element).hasClass('overdue')) {
+        $(element + ' .bs-wizard-stepnum').html('逾時未還').addClass('txt-overdue');
+    } else {
+        $(element + ' .bs-wizard-stepnum').html('進行中').removeClass('txt-overdue');
+    }
+}
+
+function updateProgressBarWidth(pct) {
+    $('.bs-wizard .progress-bar').width(pct);
+}
+
+function updateProgressBar($element) {
+    var stepNum = $element.data('stepnum');
+    var totalStep = $element.data('totalstep');
+    var barLength = $element.data('barlength');
+    var chkOverdue = $element.data('chkoverdue');
+    
+    // Update Progress Status for previous steps
+    for (var i = 1; i < parseInt(stepNum); i++)
+        updateProgressStatus('#progress-step-'+i, 'complete');
+    
+    // Update Progress Status for current step
+    if (stepNum === totalStep) {
+        updateProgressStatus('#progress-step-'+stepNum, 'complete');
+    } else if (chkOverdue === 'Y') {
+        updateProgressStatus('#progress-step-'+stepNum, $('#request').hasClass('overdue') ? 'overdue' : 'active');
+    } else {
+        updateProgressStatus('#progress-step-'+stepNum, 'active');
+    }
+    
+    // Update Progress Status for next steps
+    for (var i = parseInt(stepNum) + 1; i <= parseInt(totalStep); i++)
+        updateProgressStatus('#progress-step-'+i, 'disabled');
+    
+    // set clickable
+    for (var i = 1; i <= parseInt(totalStep); i++) {
+        if (i == parseInt(stepNum) + 1) {
+            $('#progress-step-'+i+' .progress-bar-btn').removeClass('unclickable');
+        } else {
+            $('#progress-step-'+i+' .progress-bar-btn').addClass('unclickable');
+        } 
+    }
+    
+    updateOverdueStatus('#progress-step-3');
+    updateProgressIcon();
+    updateProgressBarWidth(barLength);
+}
+/*******************/

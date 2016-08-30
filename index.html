@@ -5,15 +5,13 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <title>HKG81 QM Dashboard</title>
+    <title>81st HKG QM Dashboard</title>
     <link rel="stylesheet" media="screen" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
-    <link rel="stylesheet" type="text/css" href="css/bootstrap-datepicker3.min.css"/>
     <link rel="stylesheet" type="text/css" href="css/main.css"/>
 
     <script src="https://code.jquery.com/jquery-1.11.3.min.js" type="text/javascript"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" type="text/javascript"></script>
-    <script src="https://api.trello.com/1/client.js?key=8a42b4468e08ca9f165c88d1327add61"></script>
-    <script src="js/bootstrap-datepicker.min.js" type="text/javascript"></script>
+    <script src="https://api.trello.com/1/client.js?key=8a42b4468e08ca9f165c88d1327add61" type="text/javascript"></script>
     <script src="js/Autolinker.min.js" type="text/javascript"></script>
     <script src="js/main.js" type="text/javascript"></script>
     <script src="js/properties.js" type="text/javascript"></script>
@@ -24,9 +22,9 @@
             trelloGet('/boards/'+Board+'/cards?checklists=all',
                 showCards,
                 function() {
-					$('#loader').remove();
-					failAlert("load cards fail");
-				}
+                    $('#loader').remove();
+                    failAlert("load cards fail");
+                }
             );
         };
 
@@ -49,32 +47,17 @@
 
 
             // Find out overdue items
-            var OverdueCardUrls = [];
             $.each(cards, function(index, card) {
-                var dueDt = null;
-                if (card.due != null)
-                    dueDt = new Date(card.due.substring(0,4), card.due.substring(5,7)-1, card.due.substring(8,10));
-
                 if ( hasLabel(card, Label.borrowRec) || hasLabel(card, Label.repairRec) ) {
                     var dueDt = null;
                     if (card.due != null)
-                        dueDt = new Date(card.due.substring(0,4), card.due.substring(5,7)-1, card.due.substring(8,10));
+                        dueDt = new Date(card.due);
 
                     // Check card status
                     var pending = (card.idList == List.pending);
                     var completed = (card.idList == List.completed);
                     var overdueRequest = (dueDt != null && dueDt < new Date() && card.badges.checkItemsChecked < card.badges.checkItems);
                     var active = (!pending && !completed && !overdueRequest);
-
-                    if (overdueRequest) {
-                        if (card.checklists.length > 0) {
-                            for (var i = 0; i < card.checklists[0].checkItems.length; i++) {
-                                if (card.checklists[0].checkItems[i].state == 'incomplete') {
-                                    OverdueCardUrls.push(card.checklists[0].checkItems[i].name);
-                                }
-                            }
-                        }
-                    }
 
                     if (pending)
                         pending_count++;
@@ -90,7 +73,7 @@
                 if (!hasLabel(card, Label.borrowRec) && !hasLabel(card, Label.repairRec)) {
                     // Check card status
                     var borrowed = isBorrowed(card);
-                    var overdue = ($.inArray(card.url, OverdueCardUrls) > -1);
+                    var overdue = (card.due != null && new Date(card.due) < new Date());
                     var repair = (card.idList == List.repair);
                     var drying = (card.idList == List.drying);
                     var damaged = hasLabel(card, Label.damaged);
@@ -136,7 +119,7 @@
     <nav class="navbar navbar-default navbar-fixed-top">
         <div class="container-fluid">
             <div class="navbar-header">
-                <a class="navbar-brand" href="#">HKG81 QM</a>
+                <a class="navbar-brand" href="#">81st HKG QM</a>
             </div>
             <ul class="nav navbar-nav">
                 <li class="active"><a href="index.html">首頁</a></li>

@@ -5,15 +5,13 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <title>HKG81 QM Dashboard</title>
+    <title>81st HKG QM Dashboard</title>
     <link rel="stylesheet" media="screen" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
-    <link rel="stylesheet" type="text/css" href="css/bootstrap-datepicker3.min.css"/>
     <link rel="stylesheet" type="text/css" href="css/main.css"/>
 
     <script src="https://code.jquery.com/jquery-1.11.3.min.js" type="text/javascript"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" type="text/javascript"></script>
-    <script src="https://api.trello.com/1/client.js?key=8a42b4468e08ca9f165c88d1327add61"></script>
-    <script src="js/bootstrap-datepicker.min.js" type="text/javascript"></script>
+    <script src="https://api.trello.com/1/client.js?key=8a42b4468e08ca9f165c88d1327add61" type="text/javascript"></script>
     <script src="js/main.js" type="text/javascript"></script>
     <script src="js/properties.js" type="text/javascript"></script>
 
@@ -23,6 +21,10 @@
         var addLabelErrCount = 0;
         var addChklstItemSuccCount = 0;
         var addChklstItemErrCount = 0;
+        var total_step = 0;
+        var curr_step = 0;
+        var complete_step = 0;
+        var complete_pct = 0;
 
         var loadParam = function(data) {
             if (data.branch == 'scout')
@@ -44,10 +46,14 @@
         }
 
         var addCard = function() {
-            var itemUrls = "";
-            $.each(param.items, function(index, item) {
-                itemUrls += item.url + "\n";
-            });
+        	total_step = param.items.length + 4;
+        	
+        	var pid = startProcess("New Request (Step "+(++curr_step)+" / "+total_step+")", false);
+        	warningAlert("處理中... ("+complete_pct+"%)");
+        	//var itemUrls = "";
+            //$.each(param.items, function(index, item) {
+            //    itemUrls += item.url + "\n";
+            //});
 
             var returnDtArray = param.return_dt.split("-");
 
@@ -58,7 +64,7 @@
                 branchDesc = '深資童軍';
 
             var newCard = {
-                name: param.borrow_dt + " [" + param.activity + " (" + param.applicant + ")]",
+                name: "[" + param.borrow_dt + "] [" + param.activity + "] [" + param.applicant + "]",
                 desc: "支部: " + branchDesc + "\n" +
                       "申請人: " + param.applicant + "\n" +
                       "職位: " + param.post + "\n" +
@@ -66,9 +72,9 @@
                       "活動: " + param.activity + "\n" +
                       "借用日期: " + param.borrow_dt + "\n" +
                       "歸還日期: " + param.return_dt + "\n" +
-                      "\n\n-------\n" +
-                      itemUrls +
-                      "\n\n-------\n" +
+                      //"\n\n-------\n" +
+                      //itemUrls +
+                      "\n-------\n" +
                       "備註: \n" + param.remarks,
                 idList: List.pending,
                 due: new Date(returnDtArray[0], returnDtArray[1]-1, returnDtArray[2])
@@ -76,97 +82,129 @@
 
             trelloPost('/cards',
                 newCard,
-                addLabelAndChecklist,
-                function() { showError("<strong>錯誤: </strong>請重新提交申請。<br/>(Add Card Failed)"); }
+                function(data) {
+                    finishProcess(pid);
+                    complete_pct += 20;
+                    warningAlert("處理中... ("+complete_pct+"%)");
+                    addLabelAndChecklist(data);
+                },
+                function() { 
+                    failProcess(pid);
+                    failAlert("<strong>錯誤: </strong>請重新提交申請。 ("+complete_pct+"%)");
+                    dismissLoader();
+                }
             );
 
         }
 
         var addLabelAndChecklist = function(card) {
+        	var pid1 = startProcess("Add Label (Step "+(++curr_step)+" / "+total_step+")", false);
             trelloPost('/cards/'+card.id+'/idLabels',
                 { value: Label.borrowRec },
-                function() { addLabelSuccCount++; addCardFinishing(); },
-                function() { addLabelErrCount++; addCardFinishing(); }
+                function(data) {
+                    finishProcess(pid1);
+                    complete_pct += 10;
+                    warningAlert("處理中... ("+complete_pct+"%)");
+                    addLabelSuccCount++;
+                    addCardFinishing();
+                },
+                function() { 
+                    failProcess(pid1);
+                    failAlert("<strong>錯誤: </strong>請重新提交申請。 ("+complete_pct+"%)");
+                    dismissLoader();
+                    addLabelErrCount++;
+                    addCardFinishing();
+                }
             );
-
+            
+            var pid2 = startProcess("Add Checklist (Step "+(++curr_step)+" / "+total_step+")", false);
             trelloPost('/cards/'+card.id+'/checklists',
-                { name: 'Return Checklist' },
-                addChecklistItems,
-                function() { showError("<strong>錯誤: </strong>請重新提交申請。<br/>(Add Checklist Failed)"); }
+                { name: 'Items' },
+                function(data) {
+                    finishProcess(pid2); 
+                    complete_pct += 10;
+                    warningAlert("處理中... ("+complete_pct+"%)");
+                    addChecklistItems(data);
+                },
+                function() { 
+                    failProcess(pid2);
+                    failAlert("<strong>錯誤: </strong>請重新提交申請。 ("+complete_pct+"%)");
+                    dismissLoader();
+                }
             );
         }
 
         var addChecklistItems = function(checklist) {
             $.each(param.items, function(index, item) {
+            	var pid = startProcess("Add Item ("+item.name+") (Step "+(++curr_step)+" / "+total_step+")", false);
                 trelloPost('/checklists/'+checklist.id+'/checkItems',
                     { name: item.url,
                       pos: index+1
                     },
-                    function() { addChklstItemSuccCount++; addCardFinishing(); },
-                    function() { addChklstItemErrCount++; addCardFinishing(); }
+                    function(data) {
+                        finishProcess(pid); 
+                        complete_pct += Math.round(50 / param.items.length);
+                        warningAlert("處理中... ("+complete_pct+"%)");
+                        addChklstItemSuccCount++;
+                        addCardFinishing();
+                    },
+                    function() { 
+                        failProcess(pid);
+                        failAlert("<strong>錯誤: </strong>請重新提交申請。 ("+complete_pct+"%)");
+                        dismissLoader();
+                        addCardFinishing();
+                    }
                 );
             });
         }
 
         var addCardFinishing = function() {
             var total = param.items.length + 1;
-            if (addLabelSuccCount + addLabelErrCount + addChklstItemSuccCount + addChklstItemErrCount >= total) {
-                if (addLabelErrCount > 0) {
-                    showError("<strong>錯誤: </strong>請重新提交申請。<br/>(Add Label Failed)");
-                } else if (addChklstItemErrCount > 0) {
-                    showError("<strong>錯誤: </strong>請重新提交申請。<br/>(Add Checklist Item Failed)");
-                } else {
-					var mailTo = ADMIN_EMAIL;
-					var mailCc = param.email;
-					var mailSubject = "[81st HKG] 物資借用申請 - " + param.activity;
-					var mailMessage =
-						"<table>" +
-						"<tr><td><b>支部:</b></td><td>" + param.branch == 'scout' ? '童軍' : param.branch == 'venture' ? '深資童軍' : '' + "</td></tr>" +
-						"<tr><td><b>申請人:</b></td><td>" + param.applicant + "</td></tr>" +
-						"<tr><td><b>職位:</b></td><td>" + param.post + "</td></tr>" +
-						"<tr><td><b>E-mail:</b></td><td>" + param.email + "</td></tr>" +
-						"<tr><td><b>活動:</b></td><td>" + param.activity + "</td></tr>" +
-						"<tr><td><b>借用日期:</b></td><td>" + param.borrow_dt + "</td></tr>" +
-						"<tr><td><b>歸還日期:</b></td><td>" + param.return_dt + "</td></tr>" +
-						"<tr><td style='vertical-align: top;'><b>物資清單:</b></td><td>";
+            if (addLabelSuccCount + addChklstItemSuccCount >= total) {
+               	var pid = startProcess("Send Email (Step "+(++curr_step)+" / "+total_step+")", false);
+               	
+                var mailTo = ADMIN_EMAIL;
+                var mailCc = param.email;
+                var mailSubject = "[81st HKG QM] 物資借用申請 - " + param.activity;
+                var mailMessage =
+                    "<table>" +
+                    "<tr><td><b>支部:</b></td><td>" + (param.branch == 'scout' ? '童軍' : param.branch == 'venture' ? '深資童軍' : '') + "</td></tr>" +
+                    "<tr><td><b>申請人:</b></td><td>" + param.applicant + "</td></tr>" +
+                    "<tr><td><b>職位:</b></td><td>" + param.post + "</td></tr>" +
+                    "<tr><td><b>E-mail:</b></td><td>" + param.email + "</td></tr>" +
+                    "<tr><td><b>活動:</b></td><td>" + param.activity + "</td></tr>" +
+                    "<tr><td><b>借用日期:</b></td><td>" + param.borrow_dt + "</td></tr>" +
+                    "<tr><td><b>歸還日期:</b></td><td>" + param.return_dt + "</td></tr>" +
+                    "<tr><td style='vertical-align: top;'><b>物資清單:</b></td><td>";
 
-					$.each(param.items, function(index, item) {
-						mailMessage += item.name+'<br/>';
-					});
+                $.each(param.items, function(index, item) {
+                    mailMessage += item.name+'<br/>';
+                });
 
-					mailMessage +=
-						"</td></tr>" +
-						"<tr><td style='vertical-align: top;'><b>備註:</b></td><td>" +
-						param.remarks.replace(/\n/g, '<br/>') +
-						"</td></tr>" +
-						"</table>";
+                mailMessage +=
+                    "</td></tr>" +
+                    "<tr><td style='vertical-align: top;'><b>備註:</b></td><td>" +
+                    param.remarks.replace(/\n/g, '<br/>') +
+                    "</td></tr>" +
+                    "</table>";
 
-					sendEmail(mailTo, mailCc, mailSubject, mailMessage,
-						function () {
-							showSuccess("<strong>成功! </strong>申請已完成。");
-						},
-						function () {
-							showError("<strong>錯誤: </strong>請重新提交申請。<br/>(Send Email Failed)");
-						}
-					);
-
-                }
+                sendEmail(mailTo, mailCc, mailSubject, mailMessage,
+                    function () {
+                	    finishProcess(pid); 
+                        successAlert("<strong>成功! </strong>申請已完成。 (100%)");
+                        completeProcess();
+                        dismissLoader();
+                    },
+                    function () {
+                    	failProcess(pid);
+                        failAlert("<strong>錯誤: </strong>請重新提交申請。 ("+complete_pct+"%)");
+                        dismissLoader();
+                    }
+                );
             }
         }
 
-        var showSuccess = function(msg) {
-            dismissLoader();
-            successAlert(msg);
-            $('#button-panel').hide();
-        }
-
-        var showError = function(msg) {
-            dismissLoader();
-            failAlert(msg);
-            $('#button-panel').hide();
-        }
-
-        var showLoader = function() {
+       var showLoader = function() {
             $('#loading-overlay').removeClass('hidden');
             $(".nav a").on("click", showConfirmation);
         }
@@ -185,14 +223,14 @@
 
             if (param !== null) {
                 trelloAuthorize(function() {
-					loadParam(param);
-				});
+                    loadParam(param);
+                });
             } else {
                 $('#confirm-container').hide();
-                showError("<strong>錯誤: </strong>請重新提交申請。<br>(Param is not existed.)");
+                failAlert("<strong>錯誤: </strong>請重新提交申請。<br>(Param is not existed.)");
             }
 
-			$('#back').on('click', function() {
+            $('#back').on('click', function() {
                 var param2 = encodeURIComponent(JSON.stringify(param));
                 window.location.href = "add.html?param="+param2;
             });
@@ -200,7 +238,17 @@
             $("#submit").on("click", function() {
                 showLoader();
                 addCard(param);
+                $('#button-panel').hide();
             });
+            
+            $('#show-detail').on('click', function() {
+            	$('#process-box').removeClass('hidden');
+            });
+            
+            $('#process-box-close-btn').on('click', function() {
+                $('#process-box').addClass('hidden');
+            });
+            
         });
     </script>
 </head>
@@ -208,7 +256,7 @@
     <nav class="navbar navbar-default navbar-fixed-top">
         <div class="container-fluid">
             <div class="navbar-header">
-                <a class="navbar-brand" href="#">HKG81 QM</a>
+                <a class="navbar-brand" href="#">81st HKG QM</a>
             </div>
             <ul class="nav navbar-nav">
                 <li><a href="index.html">首頁</a></li>
@@ -219,8 +267,15 @@
     </nav>
 
     <div class="container">
-        <div class="hidden alert" role="alert" id="alert-box">
-            <span id="alert-msg"></span>
+        <div class="hidden alert" role="alert" id="alert-box" data-spy="affix" data-offset-top="1">
+	        <span id="alert-msg"></span> <a href="javascript:;" id="show-detail" class="pull-right">顯示詳情</a>
+	    </div>
+        
+        <div class="alert alert-warning process-box hidden" role="alert" id="process-box">
+            <button type="button" class="close" aria-label="Close" id="process-box-close-btn">
+                <span aria-hidden="true">&times;</span>
+            </button>
+            <div id="process-msg"></div>
         </div>
 
         <div id="confirm-container" class="panel panel-default">
@@ -271,8 +326,8 @@
                     </div>
                 </div>
             </div>
+            <div class="loading-overlay hidden" id="loading-overlay"></div>
         </div>
     </div>
-    <div class="loading-overlay hidden" id="loading-overlay"></div>
 </body>
 </html>
