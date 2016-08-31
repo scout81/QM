@@ -13,26 +13,37 @@ function trelloAuthorize(done, fail) {
     } else {
         warningAlert("<strong>Warning: </strong>Authorize Failed.<br>" +
             "Please get the authorization in the popup.");
-        Trello.authorize({
-            type: "popup",
-            name: "HKG81 QM",
-            scope: {
-                read: true,
-                write: true },
-            //expiration: "never",
-            expiration: "30days",
-            success: function() {
+        trelloAuthorize2(
+            function() {
                 $("#alert-box").addClass("hidden");
                 $("#alert-box").removeClass("alert-warning");
                 done();
             },
-            error: function() {
+            function() {
                 $('#loader').remove();
                 failAlert("<strong>錯誤: </strong>Authorize Failed.");
                 fail();
             }
-        });
+        );
     }
+}
+
+function trelloAuthorize2(done, fail) {
+	Trello.authorize({
+        type: "popup",
+        name: "81st HKG QM",
+        scope: {
+            read: true,
+            write: true },
+        //expiration: "never",
+        expiration: "30days",
+        success: function() {
+            done();
+        },
+        error: function() {
+            fail();
+        }
+    });
 }
 
 function trelloGet(url, done, fail) {
@@ -190,6 +201,20 @@ function urlParam(name, url) {
     return decodeURIComponent(results[2].replace(/\+/g, " "));
 }
 
+function getUserName(){
+	if (localStorage.trelloLogin == 'Y') {
+        trelloGet('/member/me',
+            function(data) {
+                $('.user-box').removeClass('hidden');
+                $('#user-id').html(data.fullName);
+            },
+            function() {
+                console.log('/member/me fail');
+            }
+        );
+    }
+}
+
 // Additional Data is stored in Description
 // wrapping by three backticks (```) at the end
 // in JSON format
@@ -325,8 +350,10 @@ function getCardNameByShortLink(cards, shortLink) {
 }
 
 function getCardByUrl(cards, url) {
+	url = url.substring(8); // Trim "https://"
+	var anchorText = url.split('/');
     for (var i = 0; i < cards.length; i++) {
-        if (cards[i].url == url) {
+        if (cards[i].shortLink == anchorText[2]) {
             return cards[i];
         }
     }
@@ -403,6 +430,28 @@ function getApplicant(card) {
         return array[2];
     else
         return null;
+}
+
+//Sort by status, due date, id
+function itemCompare(a, b) {
+    var order_a = a.custom.order;
+    var order_b = b.custom.order;
+    var due_a = new Date(a.due);
+    var due_b = new Date(b.due);
+    
+    if (order_a == order_b) {
+        if (due_a == due_b) {
+            return b.id.localeCompare(a.id);
+        } else if (due_b < due_a) {
+            return -1;
+        } else { 
+            return 1;
+        }
+    } else if (order_a < order_b) {
+        return -1;
+    } else {
+        return 1;
+    }   
 }
 
 /*******************

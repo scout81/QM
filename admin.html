@@ -30,38 +30,12 @@
             $('#requests').removeClass('hidden');
 
             cards = data;
-            cards.sort( function(a, b) {
-            	var due_a = new Date(a.due);
-                var due_b = new Date(b.due);
-                if (due_b < due_a)
-                    return -1;
-                else if (due_a == due_b)
-                    return 0;
-                else
-                    return 1;
-            });
-
-            // Autolinker: utility to change url text to link
-            var autolinker = new Autolinker({
-                replaceFn : function(autolinker, match) {
-                    // Custom function to get Trello card's name from card url
-                    return cardUrlToName(autolinker, match, cards);
-                }
-            });
-
-            // Autolinker: utility to change url text to link
-            var urlRemover = new Autolinker({
-                replaceFn : function(autolinker, match) {
-                    // Custom function to remove card url
-                    return cardUrlRemove(autolinker, match, cards);
-                }
-            });
-
+            
             // Create a DOM for each card
             $.each(cards, function(index, card) {
             	card.custom = {}; // store additional data
                 card.custom.order = 0;
-            	
+                
             	if (hasLabel(card, Label.borrowRec) || hasLabel(card, Label.repairRec)) {
                     var dueDt = null;
                     if (card.due != null)
@@ -102,45 +76,6 @@
                     if (label != '')
                         label = '<p>' + label + '</p>';
 
-                    // Format Description
-                    var desc = card.desc;
-                    desc = desc.replace(/\n\n\n/g, '<br>'); // \n\n\n -> <br>
-                    desc = desc.replace(/\n/g, '<br>'); // \n -> <br>
-                    if (hasLabel(card, Label.borrowRec)) {
-                        desc = urlRemover.link(desc); // url -> ''
-                    } else {
-                        desc = autolinker.link(desc); // url -> <a href="url">name</a>
-                    }
-                    desc = desc.replace(/(<br>)+/g, '<br>'); // <br><br><br> -> <br>
-                    desc = desc.replace(/-------<br>-------/g, '-------'); // <br><br><br> -> <br>
-
-                    // Checklist
-                    var checklist = '';
-                    if (card.checklists.length > 0) {
-                        for (var i = 0; i < card.checklists[0].checkItems.length; i++) {
-                            checklist += '<div>';
-                            if (card.checklists[0].checkItems[i].state == 'incomplete') {
-                                checklist += '<span class="glyphicon glyphicon-remove" aria-hidden="true" style="color: #d9534f"></span> ';
-                            } else {
-                                checklist += '<span class="glyphicon glyphicon-ok" aria-hidden="true" style="color: #5cb85c"></span> ';
-                            }
-                            checklist += autolinker.link(card.checklists[0].checkItems[i].name);
-                            if (card.checklists[0].checkItems[i].state == 'complete') {
-                                if (card.actions.length > 0) {
-                                    for (var j = 0; j < card.actions.length; j++) {
-                                        if (card.actions[j].type == 'updateCheckItemStateOnCard' &&
-                                            card.actions[j].data.checkItem.id == card.checklists[0].checkItems[i].id &&
-                                            card.actions[j].data.checkItem.state == 'complete') {
-                                            checklist += ' - <small style="color:#666;"><em>' + card.actions[j].date.substring(0,10) + '</em></small>';
-                                            break;
-                                        }
-                                    }
-                                }
-                            }
-                            checklist += '</div>';
-                        }
-                    }
-
                     var borrowDt = getBorrowDate(card);
                     var activity = getActivity(card);
                     
@@ -149,41 +84,29 @@
                     if (overdue)
                         order = 1;
                     else if (active)
-                        order = 2;
+                    	order = 2;
                     else if (borrowProcess)
-                        order = 3;
+                    	order = 3;
                     else if (pending)
                         order = 4;
                     else
-                        order = 5;
+                    	order = 5;
 
                     // Build DOM
                     var html = '<div class="col-xs-12 col-sm-6 col-md-4 '+filterClass+'">'+
                                '<div id="'+card.shortLink+'" class="request">' +
-                               '<div class="request-header">' +
+                               '<div class="request-footer">' +
                                label +
-                               '<strong>' + activity + '</strong>' +
+                               '<a href="request_adm.html?i='+card.shortLink+'"><strong>' + activity + '</strong></a>' +
                                '<div class="request-subheader">' +
                                '<div class="request-subheader-grp"><span class="glyphicon glyphicon-time" aria-hidden="true"></span> ' + borrowDt + ' / ' + dateFormat_ymd(dueDt) + '</div>' +
                                '<div class="request-subheader-grp"><span class="glyphicon glyphicon-check" aria-hidden="true"></span> ' + card.badges.checkItemsChecked+'/'+card.badges.checkItems + '</div>' +
                                '</div>' +
                                '</div>' +
-                               '<div class="request-body">' +
-                               desc +
-                               '</div>' +
-                               '<div class="request-body">' +
-                               '<h5><strong>清單:</strong></h5>' +
-                               checklist +
-                               '</div>' +
-                               '<div class="request-btn" data-status="close" >' +
-                               '<span class="glyphicon glyphicon-menu-down" aria-hidden="true"></span>' +
-                               '</div>' +
-                               '</div>' +
                                '</div>';
-
+                               
                     card.custom.order = order;
                     card.custom.html = html;
-                
                 }
             });
             
@@ -194,33 +117,12 @@
             $.each(cards, function(index, card) {
                 if (hasLabel(card, Label.borrowRec) || hasLabel(card, Label.repairRec)) {
                 	$('#requests').append(card.custom.html);
-
-                    $('#'+card.shortLink+' .request-body').hide();
-
-                    $('#'+card.shortLink+' .request-btn').on('click', function() {
-                        var status = $(this).data('status');
-                        if (status == "close") {
-                            $('#'+card.shortLink+' .request-body').show('slow');
-                            $('#'+card.shortLink+' .request-btn .glyphicon').removeClass('glyphicon-menu-down');
-                            $('#'+card.shortLink+' .request-btn .glyphicon').addClass('glyphicon-menu-up');
-                            $(this).data('status', 'open');
-                        } else {
-                            $('#'+card.shortLink+' .request-body').hide('slow');
-                            $('#'+card.shortLink+' .request-btn .glyphicon').addClass('glyphicon-menu-down');
-                            $('#'+card.shortLink+' .request-btn .glyphicon').removeClass('glyphicon-menu-up');
-                            $(this).data('status', 'close');
-                        }
-                    });
                 }
             });
         }
 
         $(function(){
             trelloAuthorize(loadCards);
-
-            $('#add-btn').on('click', function() {
-                window.location.href = "add.html";
-            });
         });
     </script>
 </head>
@@ -232,8 +134,9 @@
             </div>
             <ul class="nav navbar-nav">
                 <li><a href="index.html">首頁</a></li>
-                <li class="active"><a href="request.html">借用申請</a></li>
+                <li><a href="request.html">借用申請</a></li>
                 <li><a href="list.html">物資清單</a></li>
+                <li class="active"><a href="admin.html">管理員專用</a></li>
             </ul>
         </div>
     </nav>
@@ -244,12 +147,6 @@
             <span id="alert-msg"></span>
         </div>
         
-        <p>
-            <button type="button" class="btn btn-info" id="add-btn">
-                <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> 新增借用申請
-            </button>
-        </p>
-
         <div id="loader" style="text-align:center;">
             <img src="img/loading.gif"/>
         </div>

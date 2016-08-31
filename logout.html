@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>81st HKG QM Dashboard</title>
+    <link rel="stylesheet" media="screen" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="css/main.css"/>
+
+    <script src="https://code.jquery.com/jquery-1.11.3.min.js" type="text/javascript"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" type="text/javascript"></script>
+    <script src="https://api.trello.com/1/client.js?key=8a42b4468e08ca9f165c88d1327add61" type="text/javascript"></script>
+    <script src="js/Autolinker.min.js" type="text/javascript"></script>
+    <script src="js/main.js" type="text/javascript"></script>
+    <script src="js/properties.js" type="text/javascript"></script>
+
+    <script type="text/javascript">
+        localStorage.removeItem('trelloLogin');
+        localStorage.removeItem('trello_token');
+    </script>
+</head>
+<body>
+    <nav class="navbar navbar-default navbar-fixed-top">
+        <div class="container-fluid">
+            <div class="navbar-header">
+                <a class="navbar-brand" href="#">81st HKG QM</a>
+            </div>
+            <ul class="nav navbar-nav">
+                <li class="active"><a href="index.html">首頁</a></li>
+                <li><a href="request.html">借用申請</a></li>
+                <li><a href="list.html">物資清單</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+
+        <div class="alert alert-success" role="alert" id="alert-box">
+            <span id="alert-msg">Logout successfully.</span>
+        </div>
+        
+    </div>
+
+</body>
+</html>

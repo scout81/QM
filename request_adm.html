@@ -207,8 +207,8 @@
                 var itemsDOM = '';
                 itemsDOM += '<div class="request-body" id="item-' + item.shortLink + '">';
                 itemsDOM += '<div class="pull-right">';
-                itemsDOM += '<button type="button" class="btn request-ctrl-btn request-ctrl-btn-change txt-normal" data-item="' + item.shortLink + '"><span class="glyphicon glyphicon-retweet" title="更改"></span></button>';
-                itemsDOM += '<button type="button" class="btn request-ctrl-btn request-ctrl-btn-remove txt-normal" data-item="' + item.shortLink + '"><span class="glyphicon glyphicon-remove" title="移除"></span></button>';
+                //itemsDOM += '<button type="button" class="btn request-ctrl-btn request-ctrl-btn-change txt-normal" data-item="' + item.shortLink + '"><span class="glyphicon glyphicon-retweet" title="更改"></span></button>';
+                itemsDOM += '<button type="button" class="btn request-ctrl-btn request-ctrl-btn-remove txt-normal" data-item="' + item.shortLink + '"><span class="glyphicon glyphicon-minus-sign" title="移除"></span></button>';
                 itemsDOM += '<button type="button" class="btn request-ctrl-btn request-ctrl-btn-borrow txt-borrowed" data-toggle="button" aria-pressed="false" autocomplete="off" data-item="' + item.shortLink + '"><span class="glyphicon glyphicon-export" title="借出"></span></button>';
                 itemsDOM += '<button type="button" class="btn request-ctrl-btn request-ctrl-btn-return txt-returned" data-toggle="button" aria-pressed="false" autocomplete="off" data-item="' + item.shortLink + '"><span class="glyphicon glyphicon-ok" title="歸還"></span></button>';
                 itemsDOM += '</div>';
@@ -243,7 +243,7 @@
                         item.custom.location = getListNameById(lists, item.custom.orig_loc);
                         item.custom.borrowed = false;
                         updateItemInfo(item);
-                        $('#item-' + item.shortLink + ' .request-ctrl-btn-change').attr('disabled', false);
+                        //$('#item-' + item.shortLink + ' .request-ctrl-btn-change').attr('disabled', false);
                         $('#item-' + item.shortLink + ' .request-ctrl-btn-remove').attr('disabled', false);
                     });
                 } else {
@@ -254,7 +254,7 @@
                         item.custom.location = request.custom.location;
                         item.custom.borrowed = true;
                         updateItemInfo(item);
-                        $('#item-' + item.shortLink + ' .request-ctrl-btn-change').attr('disabled', true);
+                        //$('#item-' + item.shortLink + ' .request-ctrl-btn-change').attr('disabled', true);
                         $('#item-' + item.shortLink + ' .request-ctrl-btn-remove').attr('disabled', true);
                     });
                 }
@@ -319,7 +319,7 @@
             
             // Update control buttons
             if (request_stage == 1) {
-                $('.request-ctrl-btn-change').show();
+                //$('.request-ctrl-btn-change').show();
                 $('.request-ctrl-btn-remove').show();
                 $('.request-ctrl-btn-borrow').show();
                 $('.request-ctrl-btn-return').hide();
@@ -327,7 +327,7 @@
                 $('.request-ctrl-btn-borrow').attr('disabled', true);
                 
             } else if (request_stage == 2) {
-                $('.request-ctrl-btn-change').show();
+                //$('.request-ctrl-btn-change').show();
                 $('.request-ctrl-btn-remove').show();
                 $('.request-ctrl-btn-borrow').show();
                 $('.request-ctrl-btn-return').hide();
@@ -346,7 +346,7 @@
                 });
                 
             } else if (request_stage == 3) {
-                $('.request-ctrl-btn-change').hide();
+                //$('.request-ctrl-btn-change').hide();
                 $('.request-ctrl-btn-remove').hide();
                 $('.request-ctrl-btn-borrow').hide();
                 $('.request-ctrl-btn-return').show();
@@ -360,7 +360,7 @@
                 });
                 
             } else if (request_stage == 4) {
-                $('.request-ctrl-btn-change').hide();
+                //$('.request-ctrl-btn-change').hide();
                 $('.request-ctrl-btn-remove').hide();
                 $('.request-ctrl-btn-borrow').hide();
                 $('.request-ctrl-btn-return').show();
@@ -736,6 +736,10 @@
                 $('#process-box').addClass('hidden');
             });
             
+            $('#back-btn').on('click', function() {
+                window.location.href = "admin.html";
+            });
+            
         });
     </script>
 </head>
@@ -747,8 +751,9 @@
             </div>
             <ul class="nav navbar-nav">
                 <li><a href="index.html">首頁</a></li>
-                <li class="active"><a href="request.html">借用申請</a></li>
+                <li><a href="request.html">借用申請</a></li>
                 <li><a href="list.html">物資清單</a></li>
+                <li class="active"><a href="admin.html">管理員專用</a></li>
             </ul>
         </div>
     </nav>
@@ -765,6 +770,12 @@
             </button>
             <div id="process-msg"></div>
         </div>
+        
+        <p>
+            <button type="button" class="btn btn-info" id="back-btn">
+                <span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> 返回
+            </button>
+        </p>
         
         <div id="loader" style="text-align:center;">
             <img src="img/loading.gif"/>
@@ -802,37 +813,9 @@
             <div class="col-xs-12 col-sm-6">
                 <div class="request request-items" id="request-items">
                     <div class="request-header">
+                        <button type="button" class="btn request-ctrl-btn request-ctrl-btn-add txt-normal pull-right" style="margin-top: -10px;"><span class="glyphicon glyphicon-plus" title="加上新物資"></span></button>
                         <strong>清單</strong>
                     </div>
-                    <!-- 
-                    <div class="request-body">
-                        <button type="button" class="btn request-ctrl-btn pull-right txt-borrowed" data-toggle="button" aria-pressed="false" autocomplete="off"><span class='glyphicon glyphicon-export'></span></button>
-                        <button type="button" class="btn request-ctrl-btn pull-right txt-normal"><span class='glyphicon glyphicon-remove'></span></button>
-                        <button type="button" class="btn request-ctrl-btn pull-right txt-normal"><span class='glyphicon glyphicon-retweet'></span></button>
-                        HKG81/TE/01
-                        <div class="request-subheader">
-                            <span class="glyphicon glyphicon-map-marker" aria-hidden="true"></span> 借用中
-                        </div>
-                    </div>
-                    <div class="request-body">
-                        <button type="button" class="btn request-ctrl-btn pull-right txt-borrowed active" data-toggle="button" aria-pressed="true" autocomplete="off"><span class='glyphicon glyphicon-export'></span></button>
-                        <button type="button" class="btn request-ctrl-btn pull-right txt-normal" disabled><span class='glyphicon glyphicon-remove'></span></button>
-                        <button type="button" class="btn request-ctrl-btn pull-right txt-normal" disabled><span class='glyphicon glyphicon-retweet'></span></button>
-                        HKG81/TE/02
-                        <div class="request-subheader">
-                            <span class="glyphicon glyphicon-map-marker" aria-hidden="true"></span> 借用中
-                        </div>
-                    </div>
-                    <div class="request-body">
-                        <button type="button" class="btn request-ctrl-btn pull-right txt-borrowed" data-toggle="button" aria-pressed="false" autocomplete="off"><span class='glyphicon glyphicon-export'></span></button>
-                        <button type="button" class="btn request-ctrl-btn pull-right txt-normal"><span class='glyphicon glyphicon-remove'></span></button>
-                        <button type="button" class="btn request-ctrl-btn pull-right txt-normal"><span class='glyphicon glyphicon-retweet'></span></button>
-                        HKG81/TE/03
-                        <div class="request-subheader">
-                            <span class="glyphicon glyphicon-map-marker" aria-hidden="true"></span> 借用中
-                        </div>
-                    </div>
-                     -->
                 </div>
             </div>
         </div>

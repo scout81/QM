@@ -112,12 +112,22 @@
             $('.dashboard-widget').on('click', function() {
                 window.location.href = $(this).data('url');
             });
+            
+            if (localStorage.trelloLogin == 'Y') {
+            	$('.dashboard-widget-login-txt').html('登出');
+            	$('.dashboard-widget-login').data('url','logout.html');
+            }
+            
+            getUserName();
         });
     </script>
 </head>
 <body>
     <nav class="navbar navbar-default navbar-fixed-top">
         <div class="container-fluid">
+            <div class="pull-right user-box hidden" style="padding-top: 10px;">
+                <a class="btn btn-primary" href="#" id="user-id"></a>
+            </div>
             <div class="navbar-header">
                 <a class="navbar-brand" href="#">81st HKG QM</a>
             </div>
@@ -196,7 +206,7 @@
                     <span id="overdue" class="dashboard-widget-counter pull-right"></span>
                 </div>
             </div>
-            <div class="col-xs-6 col-sm-4 col-md-3 col-md-offset-6">
+            <div class="col-xs-6 col-sm-4 col-md-3 col-md-push-6">
                 <div class="dashboard-widget bg-repair" data-url="list.html?s=repair">
                     <div class="dashboard-widget-icon">
                         <div>
@@ -207,7 +217,7 @@
                     <span id="repair" class="dashboard-widget-counter pull-right"></span>
                 </div>
             </div>
-            <div class="col-xs-6 col-sm-4 col-md-3">
+            <div class="col-xs-6 col-sm-4 col-md-3 col-md-push-6">
                 <div class="dashboard-widget bg-drying" data-url="list.html?s=drying">
                     <div class="dashboard-widget-icon">
                         <div>
@@ -216,6 +226,16 @@
                         <div class="dashboard-widget-title">晾曬中</div>
                     </div>
                     <span id="drying" class="dashboard-widget-counter pull-right"></span>
+                </div>
+            </div>
+            <div class="col-xs-6 col-sm-4 col-md-3 col-md-pull-3">
+                <div class="dashboard-widget dashboard-widget-login bg-login" data-url="login.html">
+                    <div class="row">
+                        <div class="col-xs-6 col-md-4" style="padding-right:0;">
+                            <span class="glyphicon glyphicon-user" aria-hidden="true"></span>
+                        </div>
+                        <div class="col-xs-6 col-md-8 dashboard-widget-login-txt">管理員登入</div>
+                    </div>
                 </div>
             </div>
         </div>

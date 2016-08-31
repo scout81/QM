@@ -80,6 +80,10 @@
     color: #ddd;
 }
 
+.bg-login {
+    background-color: #999;
+}
+
 /*****************************
  * Text Color
  *****************************/
@@ -107,26 +111,23 @@
     color: #d9534f;
 }
 
-.txt-borrowed.active, .txt-borrowed.active:hover, .txt-borrowed.active:focus, .txt-borrowed:hover {
+.txt-borrowed.active, .txt-borrowed.active:hover, .txt-borrowed.active:focus, .txt-borrowed:hover, .txt-borrowed:focus {
     color: #337ab7;
 }
 
-.txt-returned.active, .txt-returned.active:hover, .txt-returned.active:focus, .txt-returned:hover {
+.txt-returned.active, .txt-returned.active:hover, .txt-returned.active:focus, .txt-returned:hover, .txt-returned:focus {
     color: #5cb85c;
 }
 
-.txt-remove.active, .txt-remove.active:hover, .txt-remove.active:focus, .txt-remove:hover {
+.txt-remove.active, .txt-remove.active:hover, .txt-remove.active:focus, .txt-remove:hover, .txt-remove:focus {
     color: #d9534f;
 }
 
-.txt-normal.active, .txt-normal.active:hover, .txt-normal.active:focus, .txt-normal:hover {
+.txt-normal.active, .txt-normal.active:hover, .txt-normal.active:focus, .txt-normal:hover, .txt-normal:focus {
     color: #333;
 }
 
-.txt-borrowed, .txt-borrowed:focus,  
-.txt-returned, .txt-returned:focus, 
-.txt-remove, .txt-remove:focus, 
-.txt-normal, .txt-normal:focus {
+.txt-borrowed, .txt-returned, .txt-remove, .txt-normal {
     color: #999;
 }
 
@@ -373,6 +374,29 @@
     color: #444;
 }
 
+.dashboard-widget-login {
+	min-height: 75px;
+}
+
+.dashboard-widget-login-txt {
+	padding-left:0;
+	font-size:14px;
+	text-align: right;
+}
+
+@media (min-width: 500px) {
+    .dashboard-widget-login-txt {
+        font-size:16px;
+    }
+}
+
+/*****************************
+ * User Box @index.html
+ *****************************/
+.user-box {
+	padding-top: 10px;
+}
+
 /*****************************
  * Logs @log.html
  *****************************/
@@ -468,6 +492,10 @@
 
 .bs-wizard > .bs-wizard-step.disabled > .bs-wizard-dot {
     background-color: #dfdfdf;
+}
+
+.bs-wizard > .bs-wizard-step.disabled > .bs-wizard-dot:hover {
+    background-color: #999;
 }
 
 .bs-wizard > .bs-wizard-step.overdue > .bs-wizard-dot {
