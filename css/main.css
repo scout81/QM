@@ -1,4 +1,65 @@
 /*****************************
+ * Noto Sans TC (Chinese_traditional) http://www.google.com/fonts/earlyaccess
+ *****************************/
+@font-face {
+  font-family: 'Noto Sans TC';
+  font-style: normal;
+  font-weight: 100;
+  unicode-range: U+3000-30FF, U+FF00-FFEF, U+4E00-9FAF;
+  src: url(https://fonts.gstatic.com/ea/notosanstc/v1/NotoSansTC-Thin.woff2) format('woff2'),
+       url(https://fonts.gstatic.com/ea/notosanstc/v1/NotoSansTC-Thin.woff) format('woff'),
+       url(https://fonts.gstatic.com/ea/notosanstc/v1/NotoSansTC-Thin.otf) format('opentype');
+}
+@font-face {
+  font-family: 'Noto Sans TC';
+  font-style: normal;
+  font-weight: 300;
+  unicode-range: U+3000-30FF, U+FF00-FFEF, U+4E00-9FAF;
+  src: url(https://fonts.gstatic.com/ea/notosanstc/v1/NotoSansTC-Light.woff2) format('woff2'),
+       url(https://fonts.gstatic.com/ea/notosanstc/v1/NotoSansTC-Light.woff) format('woff'),
+       url(https://fonts.gstatic.com/ea/notosanstc/v1/NotoSansTC-Light.otf) format('opentype');
+}
+@font-face {
+   font-family: 'Noto Sans TC';
+   font-style: normal;
+   font-weight: 400;
+   unicode-range: U+3000-30FF, U+FF00-FFEF, U+4E00-9FAF;
+   src: url(https://fonts.gstatic.com/ea/notosanstc/v1/NotoSansTC-Regular.woff2) format('woff2'),
+        url(https://fonts.gstatic.com/ea/notosanstc/v1/NotoSansTC-Regular.woff) format('woff'),
+        url(https://fonts.gstatic.com/ea/notosanstc/v1/NotoSansTC-Regular.otf) format('opentype');
+ }
+@font-face {
+   font-family: 'Noto Sans TC';
+   font-style: normal;
+   /*font-weight: 500;*/
+   font-weight: 700;
+   unicode-range: U+3000-30FF, U+FF00-FFEF, U+4E00-9FAF;
+   src: url(https://fonts.gstatic.com/ea/notosanstc/v1/NotoSansTC-Medium.woff2) format('woff2'),
+        url(https://fonts.gstatic.com/ea/notosanstc/v1/NotoSansTC-Medium.woff) format('woff'),
+        url(https://fonts.gstatic.com/ea/notosanstc/v1/NotoSansTC-Medium.otf) format('opentype');
+ }
+@font-face {
+   font-family: 'Noto Sans TC';
+   font-style: normal;
+   /*font-weight: 700;*/
+   font-weight: 900;
+   unicode-range: U+3000-30FF, U+FF00-FFEF, U+4E00-9FAF;
+   src: url(https://fonts.gstatic.com/ea/notosanstc/v1/NotoSansTC-Bold.woff2) format('woff2'),
+        url(https://fonts.gstatic.com/ea/notosanstc/v1/NotoSansTC-Bold.woff) format('woff'),
+        url(https://fonts.gstatic.com/ea/notosanstc/v1/NotoSansTC-Bold.otf) format('opentype');
+ }
+/*
+@font-face {
+   font-family: 'Noto Sans TC';
+   font-style: normal;
+   font-weight: 900;
+   unicode-range: U+3000-30FF, U+FF00-FFEF, U+4E00-9FAF;
+   src: url(https://fonts.gstatic.com/ea/notosanstc/v1/NotoSansTC-Black.woff2) format('woff2'),
+        url(https://fonts.gstatic.com/ea/notosanstc/v1/NotoSansTC-Black.woff) format('woff'),
+        url(https://fonts.gstatic.com/ea/notosanstc/v1/NotoSansTC-Black.otf) format('opentype');
+ }*/
+
+/*****************************
  * Status Label
  *****************************/
 .st-label {
@@ -378,6 +439,7 @@
 	padding-left:0;
 	font-size:24px;
 	text-align: right;
+	font-weight: 500;
 }
 
 
@@ -624,6 +686,7 @@
  **************************************/
 body {
     padding-top: 110px;
+    font-family: 'Noto Sans TC',"Helvetica Neue",Helvetica,Arial,sans-serif;
 }
 
 @media (min-width: 768px) {
