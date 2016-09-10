@@ -104,7 +104,7 @@ function trelloDelete(url, done, fail) {
         .done(done)
         .fail(fail);
     } else {
-       Trello.del(url, data, done, fail);
+       Trello.del(url, done, fail);
     }
 }
 
