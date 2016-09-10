@@ -210,6 +210,7 @@ function checkLogin(){
                 $('.user-box').removeClass('hidden');
                 username = data.fullName;
                 $('#user-id').html(username);
+                $('#admin-nav').removeClass('hidden');
             },
             function() {
                 console.log('get login info fail');
