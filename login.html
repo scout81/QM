@@ -33,6 +33,7 @@
             			localStorage.trelloLogin = 'Y';
             			$('#alert-box')
                             .removeClass('hidden')
+                            .removeClass('alert-warning')
                             .addClass('alert-success');
             			$('#alert-msg').html('Login successfully.');
             			$('#back-btn').removeClass('hidden').addClass('btn-success');
@@ -40,6 +41,7 @@
                     function() {
                     	$('#alert-box')
                             .removeClass('hidden')
+                            .removeClass('alert-warning')
                             .addClass('alert-danger');
                     	$('#alert-msg').html('Login failed.');
                     	$('#back-btn').removeClass('hidden').addClass('btn-danger');

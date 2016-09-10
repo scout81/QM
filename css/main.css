@@ -374,21 +374,12 @@
     color: #444;
 }
 
-.dashboard-widget-login {
-	min-height: 75px;
-}
-
 .dashboard-widget-login-txt {
 	padding-left:0;
-	font-size:14px;
+	font-size:24px;
 	text-align: right;
 }
 
-@media (min-width: 500px) {
-    .dashboard-widget-login-txt {
-        font-size:16px;
-    }
-}
 
 /*****************************
  * User Box @index.html

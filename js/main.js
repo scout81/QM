@@ -201,12 +201,15 @@ function urlParam(name, url) {
     return decodeURIComponent(results[2].replace(/\+/g, " "));
 }
 
+var username = '';
+
 function checkLogin(){
 	if (localStorage.trelloLogin == 'Y') {
         trelloGet('/member/me',
             function(data) {
                 $('.user-box').removeClass('hidden');
-                $('#user-id').html(data.fullName);
+                username = data.fullName;
+                $('#user-id').html(username);
             },
             function() {
                 console.log('get login info fail');
