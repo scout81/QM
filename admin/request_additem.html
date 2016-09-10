@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>81st HKG QM Dashboard</title>
+    <link rel="stylesheet" media="screen" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://gitcdn.github.io/bootstrap-toggle/2.2.2/css/bootstrap-toggle.min.css" >
+    <link rel="stylesheet" type="text/css" href="../css/main.css"/>
+
+    <script src="https://code.jquery.com/jquery-1.11.3.min.js" type="text/javascript"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" type="text/javascript"></script>
+    <script src="https://api.trello.com/1/client.js?key=8a42b4468e08ca9f165c88d1327add61" type="text/javascript"></script>
+    <script src="https://gitcdn.github.io/bootstrap-toggle/2.2.2/js/bootstrap-toggle.min.js" type="text/javascript"></script>
+    <script src="../js/Autolinker.min.js" type="text/javascript"></script>
+    <script src="../js/main.js" type="text/javascript"></script>
+    <script src="../js/properties.js" type="text/javascript"></script>
+
+    <script type="text/javascript">
+        var requestShortLink;
+        var cards = [];
+        var lists = [];
+        var request;
+        
+        var tent_count = 0;
+        var yurt_count = 0;
+        var tentpeg_count = 0;
+        var fly_count = 0;
+        var cookset_count = 0;
+        var stove_count = 0;
+        var other_count = 0;
+        
+        var loadLists = function() {
+            trelloGet('/boards/'+Board+'/lists',
+                function(data) { 
+                    lists = data;
+                    loadCards(); 
+                },
+                function() {
+                    failAlert("load request fail");
+                }
+            );
+        };
+        
+        var loadCards = function() {
+            trelloGet('/boards/'+Board+'/cards?checklists=all&actions=updateCheckItemStateOnCard',
+            	function(data) {
+                    loadRequest(data);
+                    showRequestItems(data);
+                },
+                function() {
+                    failAlert("load request fail");
+                }
+            );
+        };
+
+        var loadRequest = function(data) {
+            $('#loader').remove();
+            $('#request-items').removeClass('hidden');
+
+            cards = data;
+            
+            // Find request
+            $.each(cards, function(index, card) {
+                if (card.shortLink == requestShortLink)
+                    request = card;
+            });
+
+            // Get request info
+            var activity = getActivity(request);
+            
+            $('#request-activity').html(activity);
+        }
+        
+        // Items
+        var showRequestItems = function() {
+        	
+        	cards.sort(function (a, b) {
+        	    return a.name.localeCompare(b.name);
+        	});
+        	
+        	$.each(cards, function(index, item) {
+        		if (!hasLabel(item, Label.borrowRec) && !hasLabel(item, Label.repairRec)) {
+        			
+        			var idCheckItem = getIdCheckItem(item.shortLink);
+        			var isRequestItem = true;
+        			if (idCheckItem == null)
+        				isRequestItem = false;
+        			
+        			var location = getListNameById(lists, item.idList);
+                    
+                    // Check item status
+                    var borrowed = (item.idList == request.idList);
+                    var borrowedByOther = (!borrowed && isBorrowed(item));
+                    var overdue = (item.due != null && new Date(item.due) < new Date());
+                    var repair = (item.idList == List.repair);
+                    var drying = (item.idList == List.drying);
+                    var damaged = hasLabel(item, Label.damaged);
+                    var broken = hasLabel(item, Label.broken);
+                    
+                    var dueDt = '';
+                    if ( (borrowed || borrowedByOther || overdue)
+                            && (item.due != null && item.due != '') ) {
+                        dueDt = dateFormat_ymd(new Date(item.due));
+                    }
+                    
+                    item.custom = {}; // To store custom varables
+                    item.custom = getAdditionalData(item); // Load additional data
+                    item.custom.index = index;
+                    item.custom.idCheckItem = idCheckItem;
+                    item.custom.isRequestItem = isRequestItem;
+                    item.custom.location = location;
+                    item.custom.borrowed = borrowed;
+                    item.custom.borrowedByOther = borrowedByOther;
+                    item.custom.overdue = overdue;
+                    item.custom.repair = repair;
+                    item.custom.drying = drying;
+                    item.custom.damaged = damaged;
+                    item.custom.broken = broken;
+                    item.custom.dueDt = dueDt;
+                    
+                    // item status label
+                    var itemLabel = '';
+                    if (borrowedByOther)
+                        itemLabel += '<span class="label st-label-large bg-borrowed">借出</span>';
+                    if (overdue)
+                        itemLabel += '<span class="label st-label-large bg-late">逾時未還</span>';
+                    if (repair)
+                        itemLabel += '<span class="label st-label-large bg-repair">維修中</span>';
+                    if (drying)
+                        itemLabel += '<span class="label st-label-large bg-drying">晾曬中</span>';
+                    if (damaged)
+                        itemLabel += '<span class="label st-label-large bg-damaged">損壞</span>';
+                    if (broken)
+                        itemLabel += '<span class="label st-label-large bg-broken">不能使用</span>';
+                    if (itemLabel != '')
+                        itemLabel = '<p style="margin: 0 0 2px;">' + itemLabel + '</p>';
+                        
+                    // Create DOM
+                    var itemsDOM = '';
+                    itemsDOM += '<div class="request-body" id="item-' + item.shortLink + '">';
+                    itemsDOM += '<div class="material-switch pull-right">';
+                    itemsDOM += '<input id="switch-' + item.shortLink + '" name="switch-' + item.shortLink + '" class="item-switch" type="checkbox" value="' + index + '" />';
+                    itemsDOM += '<label for="switch-' + item.shortLink + '" class="label-success"></label>';
+                    itemsDOM += '</div>';
+                    itemsDOM += item.name;
+                    itemsDOM += itemLabel;
+                    itemsDOM += '<div class="request-subheader">';
+                    itemsDOM += '<div class="request-subheader-grp item-location"><span class="glyphicon glyphicon-map-marker" title="地點/活動" aria-hidden="true"></span> <span class="txt">' + location + '</span></div>';
+                    if (item.custom.dueDt != null && item.custom.dueDt != '') {
+                        itemsDOM += '<div class="request-subheader-grp item-due"><span class="glyphicon glyphicon-time" title="歸還日期" aria-hidden="true"></span> <span class="txt">' + item.custom.dueDt + '</span></div>';
+                    }
+                    itemsDOM += '</div>';
+                    itemsDOM += '</div>';
+                    
+                    // Append DOM to DIV
+                    if (hasLabel(item, Label.tent)) {
+                    	if (isRequestItem) 
+                    		tent_count++;
+                        $('#tent').append(itemsDOM);
+                    } else if (hasLabel(item, Label.yurt)) {
+                    	if (isRequestItem) 
+                    		yurt_count++;
+                        $('#yurt').append(itemsDOM);
+                    } else if (hasLabel(item, Label.tentpeg)) {
+                    	if (isRequestItem) 
+                    		tentpeg_count++;
+                        $('#tentpeg').append(itemsDOM);
+                    } else if (hasLabel(item, Label.fly)) {
+                    	if (isRequestItem) 
+                    		fly_count++;
+                        $('#fly').append(itemsDOM);
+                    } else if (hasLabel(item, Label.cookset)) {
+                    	if (isRequestItem) 
+                    		cookset_count++;
+                        $('#cookset').append(itemsDOM);
+                    } else if (hasLabel(item, Label.stove)) {
+                    	if (isRequestItem) 
+                    		stove_count++;
+                        $('#stove').append(itemsDOM);
+                    } else {
+                    	if (isRequestItem) 
+                    		other_count++;
+                        $('#other').append(itemsDOM);
+                    }
+                    
+                    // Due Date
+                    if (item.custom.dueDt != null && item.custom.dueDt != '') {
+                        $('#item-' + item.shortLink + ' .item-due').removeClass('hidden');
+                        $('#item-' + item.shortLink + ' .item-due .txt').html(item.custom.dueDt);
+                    }
+                    
+                    if (isRequestItem) {
+                        $('#switch-' + item.shortLink)
+                            .attr('checked', true)
+                            .data('isrequestitem', 'Y');
+                    }
+                    
+                    if (broken) {
+                    	$('#item-' + item.shortLink + ' .material-switch').hide();
+                    }
+                    
+        		}
+        	});
+        	
+        	$('.item-switch').change( function() {
+        		var index = $(this).val();
+        		var item = cards[index];
+        		var url = item.url;
+                var idCheckItem = item.custom.idCheckItem;
+                var isRequestItem = item.custom.isRequestItem;
+                if (isRequestItem) {
+                	removeChecklistItem(item, request.id, function() {
+                		item.custom.isRequestItem = false;
+                		updateCount(item, -1);
+                		updateBadge();
+                	});
+                } else {
+                	addChecklistItem(item, request, function(data) {
+                		item.custom.idCheckItem = data.id;
+                		item.custom.isRequestItem = true;
+                		updateCount(item, 1);
+                        updateBadge();
+                	});
+                }
+            });
+        	
+        	updateBadge();
+        	
+        }
+        
+        var getIdCheckItem = function(shortLink) {
+        	for (var i = 0; i < request.checklists[0].checkItems.length; i++) {
+        		var url = request.checklists[0].checkItems[i].name;
+        		url = url.substring(8); // Trim "https://"
+        	    var anchorText = url.split('/');
+        	    if (anchorText[2] == shortLink) {
+        	    	return request.checklists[0].checkItems[i].id;
+        	    }
+        	}
+        	return null;
+        }
+        
+       var removeChecklistItem = function(item, requestId, done) {
+            var pid = startProcess("Delete Checklist Item ("+item.name+")");
+            trelloDelete('/cards/'+requestId+'/checkItem/'+item.custom.idCheckItem,
+                function(data) {
+                    finishProcess(pid);
+                    clearProcess();
+                    done();
+                },
+                function() {
+                    failProcess(pid);
+                }
+            );
+        }
+        
+        var addChecklistItem = function(item, request, done) {
+            var pid = startProcess("Add Checklist Item ("+item.name+")");
+            trelloPost('/checklists/'+request.idChecklists[0]+'/checkItems',
+                { name: item.url,
+                  pos: 'bottom'
+                },
+                function(data) {
+                    finishProcess(pid); 
+                    clearProcess();
+                    done(data);
+                },
+                function() { 
+                    failProcess(pid);
+                }
+            );
+        }
+        
+        var updateCount = function(item, n) {
+        	if (hasLabel(item, Label.tent)) {
+                tent_count += n;
+            } else if (hasLabel(item, Label.yurt)) {
+                yurt_count += n;
+            } else if (hasLabel(item, Label.tentpeg)) {
+                tentpeg_count += n;
+            } else if (hasLabel(item, Label.fly)) {
+                fly_count += n;
+            } else if (hasLabel(item, Label.cookset)) {
+                cookset_count += n;
+            } else if (hasLabel(item, Label.stove)) {
+                stove_count += n;
+            } else {
+                other_count += n;
+            }
+        }
+        
+        var updateBadge = function() {
+        	if (tent_count > 0) {
+                $('#badge-tent').removeClass('hidden');
+                $('#badge-tent').html(tent_count);
+            } else {
+                $('#badge-tent').addClass('hidden');
+            }
+            
+            if (yurt_count > 0) {
+                $('#badge-yurt').removeClass('hidden');
+                $('#badge-yurt').html(yurt_count);
+            } else {
+                $('#badge-yurt').addClass('hidden');
+            }
+            
+            if (tentpeg_count > 0) {
+                $('#badge-tentpeg').removeClass('hidden');
+                $('#badge-tentpeg').html(tentpeg_count);
+            } else {
+                $('#badge-tentpeg').addClass('hidden');
+            }
+            
+            if (fly_count > 0) {
+                $('#badge-fly').removeClass('hidden');
+                $('#badge-fly').html(fly_count);
+            } else {
+                $('#badge-fly').addClass('hidden');
+            }
+            
+            if (cookset_count > 0) {
+                $('#badge-cookset').removeClass('hidden');
+                $('#badge-cookset').html(cookset_count);
+            } else {
+                $('#badge-cookset').addClass('hidden');
+            }
+            
+            if (stove_count > 0) {
+                $('#badge-stove').removeClass('hidden');
+                $('#badge-stove').html(stove_count);
+            } else {
+                $('#badge-stove').addClass('hidden');
+            }
+            
+            if (other_count > 0) {
+                $('#badge-other').removeClass('hidden');
+                $('#badge-other').html(other_count);
+            } else {
+                $('#badge-other').addClass('hidden');
+            }
+        }
+        
+        $(function(){
+            requestShortLink = urlParam('i');
+
+            if (requestShortLink !== null) {
+                trelloAuthorize(loadLists);
+            } else {
+                $('#loader').remove();
+                failAlert("<strong>錯誤: </strong>Param is not existed.");
+            }
+            
+            $('#back-link').attr('href', 'request_adm.html?i='+requestShortLink);
+            
+            $('.item-grp-btn').on('click', function () {
+            	if ($(this).find('.glyphicon').is('.glyphicon-triangle-right')) {
+            		$(this).find('.glyphicon')
+            		  .removeClass('glyphicon-triangle-right')
+            		  .addClass('glyphicon-triangle-bottom');
+            	} else {
+            		$(this).find('.glyphicon')
+                    .removeClass('glyphicon-triangle-bottom')
+                    .addClass('glyphicon-triangle-right');
+            	}
+            });
+            
+            checkLogin();
+            
+        });
+    </script>
+</head>
+<body>
+    <nav class="navbar navbar-default navbar-fixed-top">
+        <div class="container-fluid">
+            <div class="btn-group pull-right user-box hidden" style="padding-top: 10px;">
+                <button type="button" id="user-id" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"></button>
+                <ul class="dropdown-menu">
+                    <li><a href="admin.html">處理借用申請</a></li>
+                    <li role="separator" class="divider"></li>
+                    <li><a href="../logout.html">登出</a></li>
+                </ul>
+            </div>
+            <div class="navbar-header">
+                <a class="navbar-brand" href="#">81st HKG QM</a>
+            </div>
+            <ul class="nav navbar-nav">
+                <li><a href="../index.html">首頁</a></li>
+                <li class="active"><a href="../request.html">借用申請</a></li>
+                <li><a href="../list.html">物資清單</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+
+        <div class="alert hidden" role="alert" id="alert-box">
+            <span id="alert-msg"></span>
+        </div>
+        
+        <div class="alert alert-warning hidden process-box" role="alert" id="process-box" data-spy="affix" data-offset-top="1">
+            <button type="button" class="close" aria-label="Close" id="process-box-close-btn">
+                <span aria-hidden="true">&times;</span>
+            </button>
+            <div id="process-msg"></div>
+        </div>
+        
+        <div id="loader" style="text-align:center;">
+            <img src="../img/loading.gif"/>
+        </div>
+        <div class="request request-items hidden" id="request-items">
+            <div class="request-header" style="padding-top: 5px; padding-bottom: 5px;">
+                <a href="" id="back-link">
+                <span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> <strong id="request-activity"></strong>
+                </a>
+            </div>
+            <div class="item-grp">
+                <button class="btn item-grp-btn" type="button" data-toggle="collapse" data-target="#tent" aria-expanded="false" aria-controls="tent">
+                    <span class="glyphicon glyphicon-triangle-right" aria-hidden="true"></span> 
+                    <strong>A字營</strong> 
+                    <span class="badge" id="badge-tent"></span>
+                </button>
+            </div>
+            <div id="tent" class="collapse"></div>
+            <div class="item-grp">
+                <button class="btn item-grp-btn" type="button" data-toggle="collapse" data-target="#yurt" aria-expanded="false" aria-controls="yurt">
+                    <span class="glyphicon glyphicon-triangle-right" aria-hidden="true"></span> 
+                    <strong>蒙古包</strong> 
+                    <span class="badge" id="badge-yurt"></span>
+                </button>
+            </div>
+            <div id="yurt" class="collapse"></div>
+            <div class="item-grp">
+                <button class="btn item-grp-btn" type="button" data-toggle="collapse" data-target="#tentpeg" aria-expanded="false" aria-controls="tentpeg">
+                    <span class="glyphicon glyphicon-triangle-right" aria-hidden="true"></span> 
+                    <strong>營釘</strong> 
+                    <span class="badge" id="badge-tentpeg"></span>
+                </button>
+            </div>
+            <div id="tentpeg" class="collapse"></div>
+            <div class="item-grp">
+                <button class="btn item-grp-btn" type="button" data-toggle="collapse" data-target="#fly" aria-expanded="false" aria-controls="fly">
+                    <span class="glyphicon glyphicon-triangle-right" aria-hidden="true"></span> 
+                    <strong>天幕</strong> 
+                    <span class="badge" id="badge-fly"></span>
+                </button>
+            </div>
+            <div id="fly" class="collapse"></div>
+            <div class="item-grp">
+                <button class="btn item-grp-btn" type="button" data-toggle="collapse" data-target="#cookset" aria-expanded="false" aria-controls="cookset">
+                    <span class="glyphicon glyphicon-triangle-right" aria-hidden="true"></span> 
+                    <strong>炊具</strong> 
+                    <span class="badge" id="badge-cookset"></span>
+                </button>
+            </div>
+            <div id="cookset" class="collapse"></div>
+            <div class="item-grp">
+                <button class="btn item-grp-btn" type="button" data-toggle="collapse" data-target="#stove" aria-expanded="false" aria-controls="stove">
+                    <span class="glyphicon glyphicon-triangle-right" aria-hidden="true"></span> 
+                    <strong>爐頭</strong> 
+                    <span class="badge" id="badge-stove"></span>
+                </button>
+            </div>
+            <div id="stove" class="collapse"></div>
+            <div class="item-grp">
+                <button class="btn item-grp-btn" type="button" data-toggle="collapse" data-target="#other" aria-expanded="false" aria-controls="other">
+                    <span class="glyphicon glyphicon-triangle-right" aria-hidden="true"></span> 
+                    <strong>其他</strong> 
+                    <span class="badge" id="badge-other"></span>
+                </button>
+            </div>
+            <div id="other" class="collapse"></div>
+        </div>
+        <div style="height: 100px">&nbsp;</div>
+    </div>
+
+</body>
+</html>

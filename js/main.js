@@ -201,7 +201,7 @@ function urlParam(name, url) {
     return decodeURIComponent(results[2].replace(/\+/g, " "));
 }
 
-function getUserName(){
+function checkLogin(){
 	if (localStorage.trelloLogin == 'Y') {
         trelloGet('/member/me',
             function(data) {
@@ -209,10 +209,15 @@ function getUserName(){
                 $('#user-id').html(data.fullName);
             },
             function() {
-                console.log('/member/me fail');
+                console.log('get login info fail');
             }
         );
     }
+	// For Testing
+	else if (window.location.href.substring(0,4) == 'file') {
+		$('.user-box').removeClass('hidden');
+        $('#user-id').html('Testing');
+	}
 }
 
 // Additional Data is stored in Description
@@ -434,8 +439,8 @@ function getApplicant(card) {
 
 //Sort by status, due date, id
 function itemCompare(a, b) {
-    var order_a = a.custom.order;
-    var order_b = b.custom.order;
+	var order_a = (typeof a.custom === "undefined" || typeof a.custom.order === "undefined" ? 0 : a.custom.order);
+    var order_b = (typeof a.custom === "undefined" || typeof b.custom.order === "undefined" ? 0 : b.custom.order);
     var due_a = new Date(a.due);
     var due_b = new Date(b.due);
     

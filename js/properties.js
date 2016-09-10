@@ -3,6 +3,8 @@ var APPSCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyhle-PX-nb9GK_a3z0
 var USE_PROXY = true;
 if (window.location.href.substring(0,4) == 'http' && localStorage.trelloLogin == 'Y') {
 	USE_PROXY = false;
+} else if (window.location.href.substring(0,4) == 'http' && window.location.href.indexOf('/admin/') > 0) {
+	USE_PROXY = false;
 }
 
 var Board = 'qdkuj3Bf';

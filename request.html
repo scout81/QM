@@ -30,16 +30,7 @@
             $('#requests').removeClass('hidden');
 
             cards = data;
-            cards.sort( function(a, b) {
-            	var due_a = new Date(a.due);
-                var due_b = new Date(b.due);
-                if (due_b < due_a)
-                    return -1;
-                else if (due_a == due_b)
-                    return 0;
-                else
-                    return 1;
-            });
+            cards.sort(itemCompare);
 
             // Autolinker: utility to change url text to link
             var autolinker = new Autolinker({
@@ -221,12 +212,22 @@
             $('#add-btn').on('click', function() {
                 window.location.href = "add.html";
             });
+            
+            checkLogin();
         });
     </script>
 </head>
 <body>
     <nav class="navbar navbar-default navbar-fixed-top">
         <div class="container-fluid">
+            <div class="btn-group pull-right user-box hidden" style="padding-top: 10px;">
+                <button type="button" id="user-id" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"></button>
+                <ul class="dropdown-menu">
+                    <li><a href="admin/admin.html">處理借用申請</a></li>
+                    <li role="separator" class="divider"></li>
+                    <li><a href="logout.html">登出</a></li>
+                </ul>
+            </div>
             <div class="navbar-header">
                 <a class="navbar-brand" href="#">81st HKG QM</a>
             </div>

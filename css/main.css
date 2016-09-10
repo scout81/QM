@@ -115,7 +115,7 @@
     color: #337ab7;
 }
 
-.txt-returned.active, .txt-returned.active:hover, .txt-returned.active:focus, .txt-returned:hover, .txt-returned:focus {
+.txt-returned.active, .txt-returned.active:hover, .txt-returned.active:focus, .txt-returned:hover {
     color: #5cb85c;
 }
 
@@ -127,7 +127,7 @@
     color: #333;
 }
 
-.txt-borrowed, .txt-returned, .txt-remove, .txt-normal {
+.txt-borrowed, .txt-returned, .txt-remove, .txt-normal, .txt-returned:focus {
     color: #999;
 }
 
@@ -526,48 +526,10 @@
 .bs-wizard > .bs-wizard-step > .unclickable {
     pointer-events: none;
 }
-/*
-.bs-wizard > .bs-wizard-step > .progress { 
-    position: relative; 
-    border-radius: 0px; 
-    height: 8px; 
-    box-shadow: none;
-    background-color: #dfdfdf;
-    margin: 20px 0;
-}
 
-.bs-wizard > .bs-wizard-step:first-child  > .progress {
-    left: 50%; width: 50%;
-}
-
-.bs-wizard > .bs-wizard-step:last-child  > .progress {
-    width: 50%;
-}
-
-.bs-wizard > .bs-wizard-step > .progress > .progress-bar {
-    width:0px; 
-    box-shadow: none; 
-}
-
-.bs-wizard > .bs-wizard-step.complete > .progress > .progress-bar {
-    width:100%;
-}
-
-.bs-wizard > .bs-wizard-step.active > .progress > .progress-bar {
-    width:50%;
-}
-
-.bs-wizard > .bs-wizard-step:first-child.active > .progress > .progress-bar {
-    width:0%;
-}
-
-.bs-wizard > .bs-wizard-step:last-child.active > .progress > .progress-bar {
-    width: 100%;
-}
-*/
-/*END Form Wizard*/
-
-/* material-switch */
+/*****************************
+ * Material Switch @request_additem.html
+ *****************************/
 .material-switch > input[type="checkbox"] {
     display: none;   
 }
@@ -615,6 +577,45 @@
     left: 20px;
 }
 
+/*****************************
+ * back link @request_additem.html
+ *****************************/
+#back-link {
+	color: #666;
+	padding: 10px 10px 10px 0;
+    display: inline-block;
+}
+
+#back-link:hover, #back-link:focus {
+	color: #333;
+    text-decoration: none;
+}
+
+.item-grp {
+	border-bottom: 1px solid #ddd;
+    border-left: 1px solid #ddd;
+    border-right: 1px solid #ddd;
+    background-color: #f7f7f9;
+}
+
+.item-grp-btn {
+	background-color: transparent;
+	border: none;
+	/*color: #337ab7;*/
+	color: #333;
+	padding: 15px;
+	width: 100%;
+	text-align: left;
+}
+
+.item-grp-btn:hover {
+	color: #333;
+    background-color: #f0f0f2;
+}
+
+/*****************************
+ * affix process box @request_adm.html
+ *****************************/
 .affix {
 	z-index: 500;
     min-width: 300px;
@@ -623,14 +624,8 @@
     -webkit-box-shadow: 4px 6px 10px -5px #999;
     -moz-box-shadow: 4px 6px 10px -5px #999;
     box-shadow: 4px 6px 10px -5px #999;
-    
 }
 
-/*.affix > .alert {
-    -webkit-box-shadow: 4px 6px 10px -5px #999;
-    -moz-box-shadow: 4px 6px 10px -5px #999;
-    box-shadow: 4px 6px 10px -5px #999;
-}*/
 
 /**************************************
  **************************************

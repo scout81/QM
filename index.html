@@ -107,7 +107,7 @@
         }
 
         $(function(){
-            trelloAuthorize(loadCards);
+        	trelloAuthorize(loadCards);
 
             $('.dashboard-widget').on('click', function() {
                 window.location.href = $(this).data('url');
@@ -118,15 +118,20 @@
             	$('.dashboard-widget-login').data('url','logout.html');
             }
             
-            getUserName();
+            checkLogin();
         });
     </script>
 </head>
 <body>
     <nav class="navbar navbar-default navbar-fixed-top">
         <div class="container-fluid">
-            <div class="pull-right user-box hidden" style="padding-top: 10px;">
-                <a class="btn btn-primary" href="#" id="user-id"></a>
+            <div class="btn-group pull-right user-box hidden" style="padding-top: 10px;">
+                <button type="button" id="user-id" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"></button>
+                <ul class="dropdown-menu">
+				    <li><a href="admin/admin.html">處理借用申請</a></li>
+				    <li role="separator" class="divider"></li>
+				    <li><a href="logout.html">登出</a></li>
+				</ul>
             </div>
             <div class="navbar-header">
                 <a class="navbar-brand" href="#">81st HKG QM</a>

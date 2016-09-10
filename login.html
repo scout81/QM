@@ -27,6 +27,7 @@
                   .removeClass('hidden')
                   .addClass('alert-warning');
                 $('#alert-msg').html('Please get the authorization in the popup.');
+                $('#back-btn').addClass('hidden');
                 trelloAuthorize2(
             		function() {
             			localStorage.trelloLogin = 'Y';
@@ -34,12 +35,14 @@
                             .removeClass('hidden')
                             .addClass('alert-success');
             			$('#alert-msg').html('Login successfully.');
+            			$('#back-btn').removeClass('hidden').addClass('btn-success');
                     },
                     function() {
                     	$('#alert-box')
                             .removeClass('hidden')
                             .addClass('alert-danger');
                     	$('#alert-msg').html('Login failed.');
+                    	$('#back-btn').removeClass('hidden').addClass('btn-danger');
                     }
                 );
         	} else {
@@ -48,7 +51,10 @@
         		  .removeClass('hidden')
         		  .addClass('alert-danger');
         		$('#alert-msg').html('Login is not allowed.');
+        		$('#back-btn').addClass('btn-danger');
         	}
+        	
+        	checkLogin();
             
         });
     </script>
@@ -56,6 +62,14 @@
 <body>
     <nav class="navbar navbar-default navbar-fixed-top">
         <div class="container-fluid">
+            <div class="btn-group pull-right user-box hidden" style="padding-top: 10px;">
+                <button type="button" id="user-id" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"></button>
+                <ul class="dropdown-menu">
+                    <li><a href="admin/admin.html">處理借用申請</a></li>
+                    <li role="separator" class="divider"></li>
+                    <li><a href="logout.html">登出</a></li>
+                </ul>
+            </div>
             <div class="navbar-header">
                 <a class="navbar-brand" href="#">81st HKG QM</a>
             </div>
@@ -70,7 +84,8 @@
     <div class="container">
 
         <div class="alert hidden" role="alert" id="alert-box">
-            <span id="alert-msg"></span>
+            <div id="alert-msg" style="margin-bottom: 10px;"></div>
+            <a href="index.html" class="btn btn-sm" id="back-btn">返回首頁</a>
         </div>
         
     </div>

@@ -24,6 +24,14 @@
 <body>
     <nav class="navbar navbar-default navbar-fixed-top">
         <div class="container-fluid">
+            <div class="btn-group pull-right user-box hidden" style="padding-top: 10px;">
+                <button type="button" id="user-id" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"></button>
+                <ul class="dropdown-menu">
+                    <li><a href="admin/admin.html">處理借用申請</a></li>
+                    <li role="separator" class="divider"></li>
+                    <li><a href="logout.html">登出</a></li>
+                </ul>
+            </div>
             <div class="navbar-header">
                 <a class="navbar-brand" href="#">81st HKG QM</a>
             </div>
@@ -38,7 +46,8 @@
     <div class="container">
 
         <div class="alert alert-success" role="alert" id="alert-box">
-            <span id="alert-msg">Logout successfully.</span>
+            <div id="alert-msg" style="margin-bottom: 10px;">登出成功。</div>
+            <a href="index.html" class="btn btn-sm btn-success" id="back-btn">返回首頁</a>
         </div>
         
     </div>
