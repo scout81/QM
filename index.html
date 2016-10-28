@@ -19,7 +19,7 @@
     <script type="text/javascript">
         var cards = [];
         var loadCards = function() {
-            trelloGet('/b/'+Board+'/cards?checklists=all',
+            trelloGet('/boards/'+Board+'/cards?checklists=all',
                 showCards,
                 function() {
                     $('#loader').remove();
