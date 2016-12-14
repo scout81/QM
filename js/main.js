@@ -226,7 +226,6 @@ function checkLogin(){
 
 function isLogin() {
 	 if (localStorage.trelloLogin === undefined || localStorage.tokenExpire === undefined || localStorage.trello_token === undefined) {
-		 console.log("Token undefined")
 		 return false;
 	 }
 	 
@@ -236,7 +235,7 @@ function isLogin() {
 	
 	 var d = localStorage.tokenExpire.split("/");
      if (d.length != 3) {
-    	 console.log("Invalid Expire Date")
+    	 console.log("Invalid Expire Date");
     	 return false; 
      }
      
@@ -246,7 +245,7 @@ function isLogin() {
      if (expireDt > now) {
          return true;
      } else {
-    	 console.log("Token Expired")
+    	 console.log("Token Expired");
     	 return false;
      }
 }
