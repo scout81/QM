@@ -238,9 +238,9 @@ function isValidToken() {
      console.log(expireDt);
      
      if (expireDt > now) {
-         return false;
+         return true;
      } else {
-    	 return true;
+    	 return false;
      }
 }
 
