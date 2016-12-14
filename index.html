@@ -17,7 +17,7 @@
     <script src="js/properties.js" type="text/javascript"></script>
 
     <script type="text/javascript">
-        var cards = [];
+        var cards = []; 
         var loadCards = function() {
             trelloGet('/boards/'+Board+'/cards?checklists=all',
                 showCards,
