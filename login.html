@@ -30,10 +30,7 @@
                 $('#back-btn').addClass('hidden');
                 trelloAuthorize2(
             		function() {
-            			var d = new Date();
-                        d.setDate(d.getDate() + 30); 
-                        localStorage.tokenExpire = d.getDate() + "/" + d.getMonth()+1 + "/" + d.getFullYear();
-            			localStorage.trelloLogin = 'Y';
+            			login();
             			
             			$('#alert-box')
                             .removeClass('hidden')

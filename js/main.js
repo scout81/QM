@@ -11,8 +11,7 @@ function trelloAuthorize(done, fail) {
     if (USE_PROXY) {
         done();
     } else {
-    	console.log("trelloAuthorize non-proxy start");
-        warningAlert("<strong>Warning: </strong>Authorize Failed.<br>" +
+    	warningAlert("<strong>Warning: </strong>Authorize Failed.<br>" +
             "Please get the authorization in the popup.");
         trelloAuthorize2(
             function() {
@@ -26,12 +25,10 @@ function trelloAuthorize(done, fail) {
                 fail();
             }
         );
-        console.log("trelloAuthorize non-proxy end");
     }
 }
 
 function trelloAuthorize2(done, fail) {
-	console.log("trelloAuthorize2 start");
 	Trello.authorize({
         type: "popup",
         name: "81st HKG QM",
@@ -41,15 +38,12 @@ function trelloAuthorize2(done, fail) {
         //expiration: "never",
         expiration: "30days",
         success: function() {
-        	console.log("trelloAuthorize2 done");
-            done();
+        	done();
         },
         error: function() {
-        	console.log("trelloAuthorize2 error");
-            fail();
+        	fail();
         }
     });
-	console.log("trelloAuthorize2 end");
 }
 
 function trelloGet(url, done, fail) {
@@ -210,7 +204,7 @@ function urlParam(name, url) {
 var username = '';
 
 function checkLogin(){
-	if (localStorage.trelloLogin == 'Y' && isValidToken()) {
+	if (isLogin()) {
         trelloGet('/member/me',
             function(data) {
                 $('.user-box').removeClass('hidden');
@@ -230,18 +224,44 @@ function checkLogin(){
 	}
 }
 
-function isValidToken() {
-	 var now = new Date();
-     var d = localStorage.tokenExpire.split("/");
+function isLogin() {
+	 if (localStorage.trelloLogin === undefined || localStorage.tokenExpire === undefined || localStorage.trello_token === undefined) {
+		 console.log("Token undefined")
+		 return false;
+	 }
+	 
+	 if (localStorage.trelloLogin != 'Y') {
+		 return false;
+	 }
+	
+	 var d = localStorage.tokenExpire.split("/");
+     if (d.length != 3) {
+    	 console.log("Invalid Expire Date")
+    	 return false; 
+     }
+     
+     var now = new Date();
      var expireDt = new Date(d[2], d[1]-1, d[0]);
-     console.log(now);
-     console.log(expireDt);
      
      if (expireDt > now) {
          return true;
      } else {
+    	 console.log("Token Expired")
     	 return false;
      }
+}
+
+function login() {
+	var d = new Date();
+    d.setDate(d.getDate() + 30); 
+    localStorage.tokenExpire = d.getDate() + "/" + d.getMonth()+1 + "/" + d.getFullYear();
+	localStorage.trelloLogin = 'Y';
+}
+
+function logout() {
+	localStorage.removeItem('trelloLogin');
+    localStorage.removeItem('trello_token');
+    localStorage.removeItem('tokenExpire');
 }
 
 // Additional Data is stored in Description
