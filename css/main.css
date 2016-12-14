@@ -270,6 +270,11 @@
     background-color: #eee;
 }
 
+.item-modal-location {
+	font-size: 12px;
+	color: #666;
+}
+
 /*****************************
  * Filter Modal @list.html
  *****************************/
