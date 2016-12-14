@@ -11,6 +11,7 @@ function trelloAuthorize(done, fail) {
     if (USE_PROXY) {
         done();
     } else {
+    	console.log("trelloAuthorize non-proxy start");
         warningAlert("<strong>Warning: </strong>Authorize Failed.<br>" +
             "Please get the authorization in the popup.");
         trelloAuthorize2(
@@ -25,10 +26,12 @@ function trelloAuthorize(done, fail) {
                 fail();
             }
         );
+        console.log("trelloAuthorize non-proxy end");
     }
 }
 
 function trelloAuthorize2(done, fail) {
+	console.log("trelloAuthorize2 start");
 	Trello.authorize({
         type: "popup",
         name: "81st HKG QM",
@@ -38,13 +41,15 @@ function trelloAuthorize2(done, fail) {
         //expiration: "never",
         expiration: "30days",
         success: function() {
+        	console.log("trelloAuthorize2 done");
             done();
         },
         error: function() {
-        	console.log("Trello authorize fail");
+        	console.log("trelloAuthorize2 error");
             fail();
         }
     });
+	console.log("trelloAuthorize2 end");
 }
 
 function trelloGet(url, done, fail) {
