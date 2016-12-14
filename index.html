@@ -108,6 +108,8 @@
 
         $(function(){
         	trelloAuthorize(loadCards);
+        	console.log("USE_PROXY="+USE_PROXY);
+        	console.log("isValidToken()="+isValidToken());
 
             $('.dashboard-widget').on('click', function() {
                 window.location.href = $(this).data('url');
