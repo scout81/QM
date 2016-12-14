@@ -41,6 +41,7 @@ function trelloAuthorize2(done, fail) {
             done();
         },
         error: function() {
+        	console.log("Trello authorize fail");
             fail();
         }
     });
