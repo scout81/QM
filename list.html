@@ -18,6 +18,20 @@
 
     <script type="text/javascript">
         var cards = [];
+        var lists = [];
+        
+        var loadLists = function() {
+            trelloGet('/boards/'+Board+'/lists',
+                function(data) { 
+                    lists = data;
+                    loadCards(); 
+                },
+                function() {
+                    failAlert("load request fail");
+                }
+            );
+        };
+        
         var loadCards = function() {
             trelloGet('/boards/'+Board+'/cards?attachments=cover&checklists=all',
                 showCards,
@@ -146,7 +160,14 @@
                         } else {
                             $('#item-modal-cover').addClass('hidden');
                         }
-
+                        
+                        // Location
+                        var location = '<p class="item-modal-location">';
+                        location += '<span class="glyphicon glyphicon-map-marker" title="地點/活動" aria-hidden="true"></span> ' + getListNameById(lists, card.idList);
+                        if (borrowed || overdue || repair)
+                        	location += '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="glyphicon glyphicon-time" title="歸還日期" aria-hidden="true"></span> ' + dateFormat_ymd(new Date(card.due));
+                        location += '</p>';
+                        
                         // Label
                         var label = '';
                         if (borrowed)
@@ -172,7 +193,7 @@
 
                         $('#item-modal').modal('show');
                         $('#item-modal-title').html(card.name);
-                        $('#item-modal-body').html(label+desc);
+                        $('#item-modal-body').html(location+label+desc);
                         $('#log-btn').data('shortLink', card.shortLink);
                     });
                 }
@@ -248,7 +269,7 @@
         }
 
         $(function(){
-            trelloAuthorize(loadCards);
+            trelloAuthorize(loadLists);
 
             $('#filter-modal .status-toggle:checkbox').on('change', toggleFilterStatus);
             $('#filter-modal .type-toggle:checkbox').on('change', toggleFilterType);
