@@ -234,6 +234,8 @@ function isValidToken() {
 	 var now = new Date();
      var d = localStorage.tokenExpire.split("/");
      var expireDt = new Date(d[2], d[1]-1, d[0]);
+     console.log(now);
+     console.log(expireDt);
      
      if (expireDt > now) {
          return false;
