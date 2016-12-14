@@ -210,7 +210,7 @@ function urlParam(name, url) {
 var username = '';
 
 function checkLogin(){
-	if (localStorage.trelloLogin == 'Y') {
+	if (localStorage.trelloLogin == 'Y' && isValidToken()) {
         trelloGet('/member/me',
             function(data) {
                 $('.user-box').removeClass('hidden');
@@ -228,6 +228,18 @@ function checkLogin(){
 		$('.user-box').removeClass('hidden');
         $('#user-id').html('Testing');
 	}
+}
+
+function isValidToken() {
+	 var now = new Date();
+     var d = localStorage.tokenExpire.split("/");
+     var expireDt = new Date(d[2], d[1]-1, d[0]);
+     
+     if (expireDt > now) {
+         return false;
+     } else {
+    	 return true;
+     }
 }
 
 // Additional Data is stored in Description
