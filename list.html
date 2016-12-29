@@ -17,34 +17,13 @@
     <script src="js/properties.js" type="text/javascript"></script>
 
     <script type="text/javascript">
-        var cards = [];
-        var lists = [];
+        var QM = null;
         
-        var loadLists = function() {
-            trelloGet('/boards/'+Board+'/lists',
-                function(data) { 
-                    lists = data;
-                    loadCards(); 
-                },
-                function() {
-                    failAlert("load request fail");
-                }
-            );
-        };
-        
-        var loadCards = function() {
-            trelloGet('/boards/'+Board+'/cards?attachments=cover&checklists=all',
-                showCards,
-                function() { failAlert("load cards fail"); }
-            );
-        };
-
-        var showCards = function(data) {
+        var showItems = function() {
             $('#loader').remove();
             $('.items').removeClass('hidden');
 
-            cards = data;
-            cards.sort( function(a, b) {
+            QM.itemsArray.sort( function(a, b) {
                 return a.name.localeCompare(b.name);
             });
 
@@ -52,7 +31,7 @@
             var autolinker = new Autolinker({
                 replaceFn : function(autolinker, match) {
                     // Custom function to get Trello card's name from card url
-                    return cardUrlReplace(autolinker, match, cards);
+                    return cardUrlReplace(autolinker, match, QM.itemsArray);
                 }
             });
 
@@ -64,139 +43,130 @@
             var broken_count = 0;
 
             // Create a DOM for each card
-            $.each(cards, function(index, card) {
-                if (!hasLabel(card, Label.borrowRec) && !hasLabel(card, Label.repairRec)) {
-                    // Check card status
-                    var borrowed = isBorrowed(card);
-                    var overdue = (card.due != null && new Date(card.due) < new Date());
-                    var repair = (card.idList == List.repair);
-                    var drying = (card.idList == List.drying);
-                    var damaged = hasLabel(card, Label.damaged);
-                    var broken = hasLabel(card, Label.broken);
+            $.each(QM.itemsArray, function(index, item) {
+                
+                // Counter
+                if (item.custom.borrowed)
+                    borrowed_count++;
+                if (item.custom.overdue)
+                    overdue_count++;
+                if (item.custom.repair)
+                    repair_count++;
+                if (item.custom.drying)
+                    drying_count++;
+                if (item.custom.damaged)
+                    damaged_count++;
+                if (item.custom.broken)
+                    broken_count++;
 
-                    // Counter
-                    if (borrowed)
-                        borrowed_count++;
-                    if (overdue)
-                        overdue_count++;
-                    if (repair)
-                        repair_count++;
-                    if (drying)
-                        drying_count++;
-                    if (damaged)
-                        damaged_count++;
-                    if (broken)
-                        broken_count++;
+                // Add classes for filtering
+                var filterClass = '';
+                if (item.custom.borrowed)
+                    filterClass += ' filter-borrowed';
+                if (item.custom.overdue)
+                    filterClass += ' filter-overdue';
+                if (item.custom.repair)
+                    filterClass += ' filter-repair';
+                if (item.custom.drying)
+                    filterClass += ' filter-drying';
+                if (item.custom.damaged)
+                    filterClass += ' filter-damaged';
+                if (item.custom.broken)
+                    filterClass += ' filter-broken';
+                if (!item.custom.broken && !item.custom.damaged && !item.custom.drying && !item.custom.repair && !item.custom.overdue && !item.custom.borrowed)
+                    filterClass += ' filter-available';
 
-                    // Add classes for filtering
-                    var filterClass = '';
-                    if (borrowed)
-                        filterClass += ' filter-borrowed';
-                    if (overdue)
-                        filterClass += ' filter-overdue';
-                    if (repair)
-                        filterClass += ' filter-repair';
-                    if (drying)
-                        filterClass += ' filter-drying';
-                    if (damaged)
-                        filterClass += ' filter-damaged';
-                    if (broken)
-                        filterClass += ' filter-broken';
-                    if (!broken && !damaged && !drying && !repair && !overdue && !borrowed)
-                        filterClass += ' filter-available';
-
-                    // Add status label
-                    var status = '';
-                    if (broken)
-                        status += '<span class="st-label bg-broken pull-right">&nbsp;</span>';
-                    if (damaged)
-                        status += '<span class="st-label bg-damaged pull-right">&nbsp;</span>';
-                    if (drying)
-                        status += '<span class="st-label bg-drying pull-right">&nbsp;</span>';
-                    if (repair)
-                        status += '<span class="st-label bg-repair pull-right">&nbsp;</span>';
-                    if (overdue)
-                        status += '<span class="st-label bg-late pull-right">&nbsp;</span>';
-                    if (borrowed)
-                        status += '<span class="st-label bg-borrowed pull-right">&nbsp;</span>';
-                    if (!broken && !damaged && !drying && !repair && !overdue && !borrowed)
-                        status += '<span class="glyphicon glyphicon-option-vertical pull-right" aria-hidden="true" style="color: #cccccc;"></span>';
+                // Add status label
+                var status = '';
+                if (item.custom.broken)
+                    status += '<span class="st-label bg-broken pull-right">&nbsp;</span>';
+                if (item.custom.damaged)
+                    status += '<span class="st-label bg-damaged pull-right">&nbsp;</span>';
+                if (item.custom.drying)
+                    status += '<span class="st-label bg-drying pull-right">&nbsp;</span>';
+                if (item.custom.repair)
+                    status += '<span class="st-label bg-repair pull-right">&nbsp;</span>';
+                if (item.custom.overdue)
+                    status += '<span class="st-label bg-late pull-right">&nbsp;</span>';
+                if (item.custom.borrowed)
+                    status += '<span class="st-label bg-borrowed pull-right">&nbsp;</span>';
+                if (!item.custom.broken && !item.custom.damaged && !item.custom.drying && !item.custom.repair && !item.custom.overdue && !item.custom.borrowed)
+                    status += '<span class="glyphicon glyphicon-option-vertical pull-right" aria-hidden="true" style="color: #cccccc;"></span>';
 
 
-                    // Build DOM
-                    var html = '<div class="items-card-container col-xs-12 col-sm-4 col-md-3 '+filterClass+'">'+
-                               '<div id="'+card.shortLink+'" class="items-card">' +
-                               card.name +
-                               status +
-                               '</div>' +
-                               '</div>';
+                // Build DOM
+                var html = '<div class="items-card-container col-xs-12 col-sm-4 col-md-3 '+filterClass+'">'+
+                           '<div id="'+item.shortLink+'" class="items-card">' +
+                           item.name +
+                           status +
+                           '</div>' +
+                           '</div>';
 
-                    // Append DOM to DIV
-                    if (hasLabel(card, Label.tent)) {
-                        $('#tent-items').append(html);
-                    } else if (hasLabel(card, Label.yurt)) {
-                        $('#yurt-items').append(html);
-                    } else if (hasLabel(card, Label.tentpeg)) {
-                        $('#tentpeg-items').append(html);
-                    } else if (hasLabel(card, Label.fly)) {
-                        $('#fly-items').append(html);
-                    } else if (hasLabel(card, Label.cookset)) {
-                        $('#cookset-items').append(html);
-                    } else if (hasLabel(card, Label.stove)) {
-                        $('#stove-items').append(html);
-                    } else {
-                        $('#other-items').append(html);
-                    }
-
-                    $('#'+card.shortLink).on('click', function() {
-                        // cover
-                        var cover = '';
-                        if (card.attachments.length > 0) {
-                            cover = //'<div class="item-modal-cover">'+
-                                    '<img src="'+card.attachments[0].url+'" class="img-responsive center-block" style="max-height: 200px;" />';
-                                    //'</div>';
-                            $('#item-modal-cover').html(cover);
-                            $('#item-modal-cover').removeClass('hidden');
-                        } else {
-                            $('#item-modal-cover').addClass('hidden');
-                        }
-                        
-                        // Location
-                        var location = '<p class="item-modal-location">';
-                        location += '<span class="glyphicon glyphicon-map-marker" title="地點/活動" aria-hidden="true"></span> ' + getListNameById(lists, card.idList);
-                        if (borrowed || overdue || repair)
-                        	location += '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="glyphicon glyphicon-time" title="歸還日期" aria-hidden="true"></span> ' + dateFormat_ymd(new Date(card.due));
-                        location += '</p>';
-                        
-                        // Label
-                        var label = '';
-                        if (borrowed)
-                            label += '<span class="label st-label-large bg-borrowed">借出</span>';
-                        if (overdue)
-                            label += '<span class="label st-label-large bg-late">逾時未還</span>';
-                        if (repair)
-                            label += '<span class="label st-label-large bg-repair">維修中</span>';
-                        if (drying)
-                            label += '<span class="label st-label-large bg-drying">晾曬中</span>';
-                        if (damaged)
-                            label += '<span class="label st-label-large bg-damaged">損壞</span>';
-                        if (broken)
-                            label += '<span class="label st-label-large bg-broken">不能使用</span>';
-                        if (label != '')
-                            label = '<p>' + label + '</p>';
-
-                        // Format Description
-                        var desc = getDesc(card);
-                        desc = desc.replace(/\n\n\n/g, '<br>'); // \n\n\n -> <br>
-                        desc = desc.replace(/\n/g, '<br>'); // \n -> <br>
-                        desc = autolinker.link(desc); // url -> <a href="url">url</a>
-
-                        $('#item-modal').modal('show');
-                        $('#item-modal-title').html(card.name);
-                        $('#item-modal-body').html(location+label+desc);
-                        $('#log-btn').data('shortLink', card.shortLink);
-                    });
+                // Append DOM to DIV
+                if (item.custom.itemType == 'tent') {
+                    $('#tent-items').append(html);
+                } else if (item.custom.itemType == 'yurt') {
+                    $('#yurt-items').append(html);
+                } else if (item.custom.itemType == 'tentpeg') {
+                    $('#tentpeg-items').append(html);
+                } else if (item.custom.itemType == 'fly') {
+                    $('#fly-items').append(html);
+                } else if (item.custom.itemType == 'cookset') {
+                    $('#cookset-items').append(html);
+                } else if (item.custom.itemType == 'stove') {
+                    $('#stove-items').append(html);
+                } else {
+                    $('#other-items').append(html);
                 }
+
+                $('#'+item.shortLink).on('click', function() {
+                    // cover
+                    var cover = '';
+                    if (typeof(item.attachments) != "undefined" && item.attachments.length > 0) {
+                        cover = //'<div class="item-modal-cover">'+
+                                '<img src="'+item.attachments[0].url+'" class="img-responsive center-block" style="max-height: 200px;" />';
+                                //'</div>';
+                        $('#item-modal-cover').html(cover);
+                        $('#item-modal-cover').removeClass('hidden');
+                    } else {
+                        $('#item-modal-cover').addClass('hidden');
+                    }
+                    
+                    // Location
+                    var location = '<p class="item-modal-location">';
+                    location += '<span class="glyphicon glyphicon-map-marker" title="地點/活動" aria-hidden="true"></span> ' + item.custom.location;
+                    if (item.custom.borrowed || item.custom.overdue || item.custom.repair)
+                    	location += '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="glyphicon glyphicon-time" title="歸還日期" aria-hidden="true"></span> ' + item.custom.dueDt;
+                    location += '</p>';
+                    
+                    // Label
+                    var label = '';
+                    if (item.custom.borrowed)
+                        label += '<span class="label st-label-large bg-borrowed">借出</span>';
+                    if (item.custom.overdue)
+                        label += '<span class="label st-label-large bg-late">逾時未還</span>';
+                    if (item.custom.repair)
+                        label += '<span class="label st-label-large bg-repair">維修中</span>';
+                    if (item.custom.drying)
+                        label += '<span class="label st-label-large bg-drying">晾曬中</span>';
+                    if (item.custom.damaged)
+                        label += '<span class="label st-label-large bg-damaged">損壞</span>';
+                    if (item.custom.broken)
+                        label += '<span class="label st-label-large bg-broken">不能使用</span>';
+                    if (label != '')
+                        label = '<p>' + label + '</p>';
+
+                    // Format Description
+                    var desc = getDesc(item);
+                    desc = desc.replace(/\n\n\n/g, '<br>'); // \n\n\n -> <br>
+                    desc = desc.replace(/\n/g, '<br>'); // \n -> <br>
+                    desc = autolinker.link(desc); // url -> <a href="url">url</a>
+
+                    $('#item-modal').modal('show');
+                    $('#item-modal-title').html(item.name);
+                    $('#item-modal-body').html(location+label+desc);
+                    $('#log-btn').data('shortLink', item.shortLink);
+                });
             });
 
             $('#badge-borrowed').html('('+borrowed_count+')');
@@ -269,7 +239,10 @@
         }
 
         $(function(){
-            trelloAuthorize(loadLists);
+            loadQM(function(_QM){
+                QM = _QM;
+                showItems();
+            });
 
             $('#filter-modal .status-toggle:checkbox').on('change', toggleFilterStatus);
             $('#filter-modal .type-toggle:checkbox').on('change', toggleFilterType);

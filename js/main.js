@@ -502,6 +502,273 @@ function itemCompare(a, b) {
     }   
 }
 
+function initRequest(request) {
+	request.custom = {}; // To store custom varables
+	
+	 var dueDt = null;
+     if (request.due != null) {
+         dueDt = new Date(request.due);
+         dueDt = new Date(dueDt.getFullYear(), dueDt.getMonth(), dueDt.getDate());
+     }
+     
+     var currDt = new Date(); 
+     currDt = new Date(currDt.getFullYear(), currDt.getMonth(), currDt.getDate());
+     
+     // Check request status
+     var pending = (request.idList == List.pending);
+     var borrowProcess = hasLabel(request, Label.borrowProcess);
+     var overdue = (!pending && !borrowProcess && dueDt != null && dueDt < currDt && request.badges.checkItemsChecked < request.badges.checkItems);
+     var active = (hasLabel(request, Label.active) && !overdue);
+     var completed = (request.idList == List.completed);
+     
+     var borrowDt = getBorrowDate(request);
+     var activity = getActivity(request);
+     var applicant = getApplicant(request);
+     
+     request.custom.dueDt = dateFormat_ymd(dueDt);
+     request.custom.pending = pending;
+     request.custom.completed = completed;
+     request.custom.overdue = overdue;
+     request.custom.active = active;
+     request.custom.borrowProcess = borrowProcess;
+     request.custom.borrowDt = borrowDt;
+     request.custom.activity = activity;
+     request.custom.applicant = applicant;
+     request.custom.location = request.custom.activity + ' (' + request.custom.applicant + ')';
+     request.custom.checkedItemCount = request.badges.checkItemsChecked;
+     request.custom.itemCount = request.badges.checkItems;
+}
+
+function initItem(item) {
+	
+}
+
+function loadQM(done, fail) {
+	var QM = {
+		lists: {},
+		listsArray: [],
+		requests: {},
+		requestsArray: [],
+		items: {},
+		itemsArray: [],
+	};
+	
+	var trello_CardsData = null;
+	var trello_ListsData = null;
+	
+	var cardsData_isDone = false;
+	var listsData_isDone = false;
+	
+	// Check Authorize
+	trelloAuthorize(function() {
+		
+		// Get Cards Data
+		trelloGet('/boards/'+Board+'/cards?checklists=all&actions=updateCheckItemStateOnCard&attachments=cover',
+	        function(data) {
+				trello_CardsData = data;
+				cardsData_isDone = true;
+				if (cardsData_isDone && listsData_isDone) {
+					doLoadQM(QM, trello_CardsData, trello_ListsData);
+					done(QM);
+				}
+			},
+	        function() {
+				$('#loader').remove();
+                failAlert("<strong>錯誤: </strong>Get Cards Data Fail.");
+	            console.log("Get Cards Data Fail");
+	            fail();
+	        }
+	    );
+		
+		// Get Lists Data
+		trelloGet('/boards/'+Board+'/lists',
+	        function(data) {
+				trello_ListsData = data;
+				listsData_isDone = true;
+				if (cardsData_isDone && listsData_isDone) {
+					doLoadQM(QM, trello_CardsData, trello_ListsData);
+					done(QM);
+				}
+			},
+	        function() {
+				$('#loader').remove();
+                failAlert("<strong>錯誤: </strong>Get Lists Data Fail.");
+	            console.log("Get Lists Data Fail");
+	            fail();
+	        }
+	    );
+	});
+}
+
+function doLoadQM(QM, trello_CardsData, trello_ListsData) {
+	
+	$.each(trello_ListsData, function(index, list) {
+		QM.lists[list.id] = list;
+		QM.listsArray.push(list);
+    });
+	
+	$.each(trello_CardsData, function(index, card) {
+		if ( hasLabel(card, Label.borrowRec) || hasLabel(card, Label.repairRec) ) {
+			QM.requests[card.shortLink] = card;
+			QM.requestsArray.push(card);
+		} else {
+			QM.items[card.shortLink] = card;
+			QM.itemsArray.push(card);
+		}
+    });
+	
+	// -------------------------------------------------------------------
+	// Requests
+	// -------------------------------------------------------------------
+	$.each(QM.requestsArray, function(index, request) {
+		request.custom = {}; // To store custom varables
+		
+		var dueDt = null;
+	    if (request.due != null) {
+	    	dueDt = new Date(request.due);
+	    	dueDt = new Date(dueDt.getFullYear(), dueDt.getMonth(), dueDt.getDate());
+	    }
+	     
+	    var currDt = new Date(); 
+	    currDt = new Date(currDt.getFullYear(), currDt.getMonth(), currDt.getDate());
+	    
+	    // Request status
+	    request.custom.pending = (request.idList == List.pending);
+	    request.custom.borrowProcess = hasLabel(request, Label.borrowProcess);
+	    request.custom.overdue = (!request.custom.pending && !request.custom.borrowProcess && dueDt != null && dueDt < currDt && request.badges.checkItemsChecked < request.badges.checkItems);
+	    request.custom.active = (hasLabel(request, Label.active) && !request.custom.overdue);
+	    request.custom.completed = (request.idList == List.completed);
+	    
+	    request.custom.borrowDt = getBorrowDate(request);
+	    request.custom.activity = getActivity(request);
+	    request.custom.applicant = getApplicant(request);
+	    request.custom.dueDt = dateFormat_ymd(dueDt);
+	    request.custom.location = request.custom.activity + ' (' + request.custom.applicant + ')';
+	    request.custom.checkedItemCount = request.badges.checkItemsChecked;
+	    request.custom.itemCount = request.badges.checkItems;
+	    
+	    // Request Items
+	    request.custom.requestItems = [];
+	    
+	    // Sort Request Items by pos
+        request.checklists[0].checkItems.sort(function (a, b) {
+        	return (a.pos < b.pos ? -1 : 1);
+        });
+        
+        for (var i = 0; i < request.checklists[0].checkItems.length; i++) {
+         
+        	// -------------------------------------------------------------------
+        	// Request Items
+        	// -------------------------------------------------------------------
+        	
+        	// Get item ShortLink
+        	var reqItemUrl = request.checklists[0].checkItems[i].name; // url e.g. https://trello.com/c/zxzacSwh/67-tp06-20
+        	reqItemUrl = reqItemUrl.substring(8); // Trim "https://"
+        	var reqItemShortLink = reqItemUrl.split('/')[2];
+        	
+        	// clone item
+        	var reqItem = $.extend(true, {}, QM.items[reqItemShortLink]);
+        	request.custom.requestItems.push(reqItem);
+        	 
+        	// Init item
+        	reqItem.custom = {}; // To store custom varables
+        	reqItem.custom.idCheckItem = request.checklists[0].checkItems[i].id;
+        	reqItem.custom.location = QM.lists[reqItem.idList].name;
+        	reqItem.custom = $.extend(true, reqItem.custom, getAdditionalData(reqItem)); // Load additional data from desc
+        	reqItem.custom.index = i;
+            
+            var reqItemDueDt = null;
+    	    if (reqItem.due != null) {
+    	    	reqItemDueDt = new Date(reqItem.due);
+    	    	reqItemDueDt = new Date(reqItemDueDt.getFullYear(), reqItemDueDt.getMonth(), reqItemDueDt.getDate());
+    	    }
+            
+            // item status
+    	    reqItem.custom.borrowed = (reqItem.idList == request.idList);
+    	    reqItem.custom.borrowedByOther = (reqItem.idList != request.idList && isBorrowed(reqItem));
+    	    reqItem.custom.overdue = (reqItem.due != null && reqItemDueDt < currDt);
+    	    reqItem.custom.repair = (reqItem.idList == List.repair);
+    	    reqItem.custom.drying = (reqItem.idList == List.drying);
+    	    reqItem.custom.damaged = hasLabel(reqItem, Label.damaged);
+    	    reqItem.custom.broken = hasLabel(reqItem, Label.broken);
+    	    reqItem.custom.returned = (request.checklists[0].checkItems[i].state == 'complete');
+             
+            if ( (reqItem.custom.borrowed || reqItem.custom.borrowedByOther || reqItem.custom.overdue)
+            		&& (reqItem.due != null && reqItem.due != '') ) {
+            	reqItem.custom.dueDt = dateFormat_ymd(reqItemDueDt);
+            }
+            
+            if (reqItem.custom.returned) {
+                $.each(request.actions, function(index, action) {
+                    if (action.type == 'updateCheckItemStateOnCard'
+                            && action.data.checkItem.id == reqItem.custom.idCheckItem
+                            && action.data.checkItem.state == 'complete') {
+                    	reqItem.custom.completeDt = dateFormat_ymd(new Date(action.date));
+                    }
+                });
+            }
+         } // End of Request Items
+	});	// End of Request Items
+    
+	// -------------------------------------------------------------------
+	// Items
+	// -------------------------------------------------------------------
+	$.each(QM.itemsArray, function(index, item) {
+		
+		item.custom = {}; // To store custom varables
+		
+		var dueDt = null;
+	    if (item.due != null) {
+	    	dueDt = new Date(item.due);
+	    	dueDt = new Date(dueDt.getFullYear(), dueDt.getMonth(), dueDt.getDate());
+	    }
+	     
+	    var currDt = new Date(); 
+	    currDt = new Date(currDt.getFullYear(), currDt.getMonth(), currDt.getDate());
+	    
+		// item status
+		item.custom.borrowed = isBorrowed(item);
+		item.custom.overdue = (item.due != null && dueDt < currDt);
+		item.custom.repair = (item.idList == List.repair);
+		item.custom.drying = (item.idList == List.drying);
+		item.custom.damaged = hasLabel(item, Label.damaged);
+		item.custom.broken = hasLabel(item, Label.broken);
+		
+		item.custom = $.extend(true, item.custom, getAdditionalData(item)); // Load additional data from desc
+		item.custom.location = QM.lists[item.idList].name;
+		
+		if (dueDt != null) {
+			item.custom.dueDt = dateFormat_ymd(dueDt);
+        }
+		
+		// item type
+		for (var i = 0; i < item.labels.length; i++) {
+	        if (item.labels[i].id == Label.tent) {
+	            item.custom.itemType = 'tent';
+	        } else if (item.labels[i].id == Label.yurt) {
+	        	item.custom.itemType = 'yurt';
+	        } else if (item.labels[i].id == Label.tentpeg) {
+	        	item.custom.itemType = 'tentpeg';
+	        } else if (item.labels[i].id == Label.fly) {
+	        	item.custom.itemType = 'fly';
+	        } else if (item.labels[i].id == Label.cookset) {
+	        	item.custom.itemType = 'cookset';
+	        } else if (item.labels[i].id == Label.stove) {
+	        	item.custom.itemType = 'stove';
+	        } else if (item.labels[i].id == Label.other) {
+	        	item.custom.itemType = 'other';
+	        } else if (item.labels[i].id == Label.tent_tent) {
+	        	item.custom.tentPart = 'tent';
+	        } else if (item.labels[i].id == Label.tent_pole) {
+	        	item.custom.tentPart = 'pole';
+	        } else if (item.labels[i].id == Label.tent_shelter) {
+	        	item.custom.tentPart = 'shelter';
+	        }
+	    }
+	}); // End of Items
+	
+}
+
 /*******************
  * Process Box
  ******************/

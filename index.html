@@ -17,22 +17,11 @@
     <script src="js/properties.js" type="text/javascript"></script>
 
     <script type="text/javascript">
-        var cards = []; 
-        var loadCards = function() {
-            trelloGet('/boards/'+Board+'/cards?checklists=all',
-                showCards,
-                function() {
-                    $('#loader').remove();
-                    failAlert("load cards fail");
-                }
-            );
-        };
-
-        var showCards = function(data) {
+        var QM = null;
+        
+        var updateCounters = function() {
             $('#loader').remove();
             $('.dashboard').removeClass('hidden');
-
-            cards = data;
 
             var borrowed_count = 0;
             var overdue_count = 0;
@@ -45,53 +34,30 @@
             var overdueRequest_count = 0;
             var active_count = 0;
 
-
-            // Find out overdue items
-            $.each(cards, function(index, card) {
-                if ( hasLabel(card, Label.borrowRec) || hasLabel(card, Label.repairRec) ) {
-                    var dueDt = null;
-                    if (card.due != null)
-                        dueDt = new Date(card.due);
-
-                    // Check card status
-                    var pending = (card.idList == List.pending);
-                    var completed = (card.idList == List.completed);
-                    var overdueRequest = (dueDt != null && dueDt < new Date() && card.badges.checkItemsChecked < card.badges.checkItems);
-                    var active = (!pending && !completed && !overdueRequest);
-
-                    if (pending)
-                        pending_count++;
-                    if (overdueRequest)
-                        overdueRequest_count++;
-                    if (active)
-                        active_count++;
-                }
+            // Count requests
+            $.each(QM.requestsArray, function(index, request) {
+            	if (request.custom.pending || request.custom.borrowProcess)
+                   pending_count++;
+                if (request.custom.overdue)
+                   overdueRequest_count++;
+                if (request.custom.active)
+                   active_count++;
             });
 
-            // Loop each cards
-            $.each(cards, function(index, card) {
-                if (!hasLabel(card, Label.borrowRec) && !hasLabel(card, Label.repairRec)) {
-                    // Check card status
-                    var borrowed = isBorrowed(card);
-                    var overdue = (card.due != null && new Date(card.due) < new Date());
-                    var repair = (card.idList == List.repair);
-                    var drying = (card.idList == List.drying);
-                    var damaged = hasLabel(card, Label.damaged);
-                    var broken = hasLabel(card, Label.broken);
-
-                    if (borrowed)
-                        borrowed_count++;
-                    if (overdue)
-                        overdue_count++;
-                    if (repair)
-                        repair_count++;
-                    if (drying)
-                        drying_count++;
-                    if (damaged)
-                        damaged_count++;
-                    if (broken)
-                        broken_count++;
-                }
+            // Count items
+            $.each(QM.itemsArray, function(index, item) {
+            	if (item.custom.borrowed)
+                    borrowed_count++;
+                if (item.custom.overdue)
+                    overdue_count++;
+                if (item.custom.repair)
+                    repair_count++;
+                if (item.custom.drying)
+                    drying_count++;
+                if (item.custom.damaged)
+                    damaged_count++;
+                if (item.custom.broken)
+                    broken_count++;
             });
 
             $('#borrowed').html(borrowed_count);
@@ -107,7 +73,10 @@
         }
 
         $(function(){
-        	trelloAuthorize(loadCards);
+       		loadQM(function(_QM){
+       		   QM = _QM;
+       		   updateCounters();
+       		});
         	
             $('.dashboard-widget').on('click', function() {
                 window.location.href = $(this).data('url');
