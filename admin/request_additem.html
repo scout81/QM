@@ -19,9 +19,8 @@
     <script src="../js/properties.js" type="text/javascript"></script>
 
     <script type="text/javascript">
+        var QM = null;
         var requestShortLink;
-        var cards = [];
-        var lists = [];
         var request;
         
         var tent_count = 0;
@@ -32,182 +31,115 @@
         var stove_count = 0;
         var other_count = 0;
         
-        var loadLists = function() {
-            trelloGet('/boards/'+Board+'/lists',
-                function(data) { 
-                    lists = data;
-                    loadCards(); 
-                },
-                function() {
-                    failAlert("load request fail");
-                }
-            );
-        };
-        
-        var loadCards = function() {
-            trelloGet('/boards/'+Board+'/cards?checklists=all&actions=updateCheckItemStateOnCard',
-            	function(data) {
-                    loadRequest(data);
-                    showRequestItems(data);
-                },
-                function() {
-                    failAlert("load request fail");
-                }
-            );
-        };
-
-        var loadRequest = function(data) {
+        var loadRequest = function() {
             $('#loader').remove();
             $('#request-items').removeClass('hidden');
 
-            cards = data;
             
             // Find request
-            $.each(cards, function(index, card) {
-                if (card.shortLink == requestShortLink)
-                    request = card;
-            });
-
-            // Get request info
-            var activity = getActivity(request);
+            request = QM.requests[requestShortLink];
             
-            $('#request-activity').html(activity);
+            // Get request info
+            $('#request-activity').html(request.custom.activity);
         }
         
         // Items
         var showRequestItems = function() {
         	
-        	cards.sort(function (a, b) {
+        	QM.itemsArray.sort(function (a, b) {
         	    return a.name.localeCompare(b.name);
         	});
         	
-        	$.each(cards, function(index, item) {
-        		if (!hasLabel(item, Label.borrowRec) && !hasLabel(item, Label.repairRec)) {
+        	$.each(QM.itemsArray, function(index, item) {
         			
-        			var idCheckItem = getIdCheckItem(item.shortLink);
-        			var isRequestItem = true;
-        			if (idCheckItem == null)
-        				isRequestItem = false;
-        			
-        			var location = getListNameById(lists, item.idList);
+    			var isRequestItem = isInRequestCheckList(item);
+    			
+    			// item status label
+                var itemLabel = '';
+                if (item.custom.borrowed && item.idList != request.idList)
+                    itemLabel += '<span class="label st-label-large bg-borrowed">借出</span>';
+                if (item.custom.overdue)
+                    itemLabel += '<span class="label st-label-large bg-late">逾時未還</span>';
+                if (item.custom.repair)
+                    itemLabel += '<span class="label st-label-large bg-repair">維修中</span>';
+                if (item.custom.drying)
+                    itemLabel += '<span class="label st-label-large bg-drying">晾曬中</span>';
+                if (item.custom.damaged)
+                    itemLabel += '<span class="label st-label-large bg-damaged">損壞</span>';
+                if (item.custom.broken)
+                    itemLabel += '<span class="label st-label-large bg-broken">不能使用</span>';
+                if (itemLabel != '')
+                    itemLabel = '<p style="margin: 0 0 2px;">' + itemLabel + '</p>';
                     
-                    // Check item status
-                    var borrowed = (item.idList == request.idList);
-                    var borrowedByOther = (!borrowed && isBorrowed(item));
-                    var overdue = (item.due != null && new Date(item.due) < new Date());
-                    var repair = (item.idList == List.repair);
-                    var drying = (item.idList == List.drying);
-                    var damaged = hasLabel(item, Label.damaged);
-                    var broken = hasLabel(item, Label.broken);
-                    
-                    var dueDt = '';
-                    if ( (borrowed || borrowedByOther || overdue)
-                            && (item.due != null && item.due != '') ) {
-                        dueDt = dateFormat_ymd(new Date(item.due));
-                    }
-                    
-                    item.custom = {}; // To store custom varables
-                    item.custom = getAdditionalData(item); // Load additional data
-                    item.custom.index = index;
-                    item.custom.idCheckItem = idCheckItem;
-                    item.custom.isRequestItem = isRequestItem;
-                    item.custom.location = location;
-                    item.custom.borrowed = borrowed;
-                    item.custom.borrowedByOther = borrowedByOther;
-                    item.custom.overdue = overdue;
-                    item.custom.repair = repair;
-                    item.custom.drying = drying;
-                    item.custom.damaged = damaged;
-                    item.custom.broken = broken;
-                    item.custom.dueDt = dueDt;
-                    
-                    // item status label
-                    var itemLabel = '';
-                    if (borrowedByOther)
-                        itemLabel += '<span class="label st-label-large bg-borrowed">借出</span>';
-                    if (overdue)
-                        itemLabel += '<span class="label st-label-large bg-late">逾時未還</span>';
-                    if (repair)
-                        itemLabel += '<span class="label st-label-large bg-repair">維修中</span>';
-                    if (drying)
-                        itemLabel += '<span class="label st-label-large bg-drying">晾曬中</span>';
-                    if (damaged)
-                        itemLabel += '<span class="label st-label-large bg-damaged">損壞</span>';
-                    if (broken)
-                        itemLabel += '<span class="label st-label-large bg-broken">不能使用</span>';
-                    if (itemLabel != '')
-                        itemLabel = '<p style="margin: 0 0 2px;">' + itemLabel + '</p>';
-                        
-                    // Create DOM
-                    var itemsDOM = '';
-                    itemsDOM += '<div class="request-body" id="item-' + item.shortLink + '">';
-                    itemsDOM += '<div class="material-switch pull-right">';
-                    itemsDOM += '<input id="switch-' + item.shortLink + '" name="switch-' + item.shortLink + '" class="item-switch" type="checkbox" value="' + index + '" />';
-                    itemsDOM += '<label for="switch-' + item.shortLink + '" class="label-success"></label>';
-                    itemsDOM += '</div>';
-                    itemsDOM += item.name;
-                    itemsDOM += itemLabel;
-                    itemsDOM += '<div class="request-subheader">';
-                    itemsDOM += '<div class="request-subheader-grp item-location"><span class="glyphicon glyphicon-map-marker" title="地點/活動" aria-hidden="true"></span> <span class="txt">' + location + '</span></div>';
-                    if (item.custom.dueDt != null && item.custom.dueDt != '') {
-                        itemsDOM += '<div class="request-subheader-grp item-due"><span class="glyphicon glyphicon-time" title="歸還日期" aria-hidden="true"></span> <span class="txt">' + item.custom.dueDt + '</span></div>';
-                    }
-                    itemsDOM += '</div>';
-                    itemsDOM += '</div>';
-                    
-                    // Append DOM to DIV
-                    if (hasLabel(item, Label.tent)) {
-                    	if (isRequestItem) 
-                    		tent_count++;
-                        $('#tent').append(itemsDOM);
-                    } else if (hasLabel(item, Label.yurt)) {
-                    	if (isRequestItem) 
-                    		yurt_count++;
-                        $('#yurt').append(itemsDOM);
-                    } else if (hasLabel(item, Label.tentpeg)) {
-                    	if (isRequestItem) 
-                    		tentpeg_count++;
-                        $('#tentpeg').append(itemsDOM);
-                    } else if (hasLabel(item, Label.fly)) {
-                    	if (isRequestItem) 
-                    		fly_count++;
-                        $('#fly').append(itemsDOM);
-                    } else if (hasLabel(item, Label.cookset)) {
-                    	if (isRequestItem) 
-                    		cookset_count++;
-                        $('#cookset').append(itemsDOM);
-                    } else if (hasLabel(item, Label.stove)) {
-                    	if (isRequestItem) 
-                    		stove_count++;
-                        $('#stove').append(itemsDOM);
-                    } else {
-                    	if (isRequestItem) 
-                    		other_count++;
-                        $('#other').append(itemsDOM);
-                    }
-                    
-                    // Due Date
-                    if (item.custom.dueDt != null && item.custom.dueDt != '') {
-                        $('#item-' + item.shortLink + ' .item-due').removeClass('hidden');
-                        $('#item-' + item.shortLink + ' .item-due .txt').html(item.custom.dueDt);
-                    }
-                    
-                    if (isRequestItem) {
-                        $('#switch-' + item.shortLink)
-                            .attr('checked', true)
-                            .data('isrequestitem', 'Y');
-                    }
-                    
-                    if (broken) {
-                    	$('#item-' + item.shortLink + ' .material-switch').hide();
-                    }
-                    
-        		}
+                // Create DOM
+                var itemsDOM = '';
+                itemsDOM += '<div class="request-body" id="item-' + item.shortLink + '">';
+                itemsDOM += '<div class="material-switch pull-right">';
+                itemsDOM += '<input id="switch-' + item.shortLink + '" name="switch-' + item.shortLink + '" class="item-switch" type="checkbox" value="' + index + '" />';
+                itemsDOM += '<label for="switch-' + item.shortLink + '" class="label-success"></label>';
+                itemsDOM += '</div>';
+                itemsDOM += item.name;
+                itemsDOM += itemLabel;
+                itemsDOM += '<div class="request-subheader">';
+                itemsDOM += '<div class="request-subheader-grp item-location"><span class="glyphicon glyphicon-map-marker" title="地點/活動" aria-hidden="true"></span> <span class="txt">' + item.custom.location + '</span></div>';
+                if (item.custom.dueDt != null && item.custom.dueDt != '') {
+                    itemsDOM += '<div class="request-subheader-grp item-due"><span class="glyphicon glyphicon-time" title="歸還日期" aria-hidden="true"></span> <span class="txt">' + item.custom.dueDt + '</span></div>';
+                }
+                itemsDOM += '</div>';
+                itemsDOM += '</div>';
+                
+                // Append DOM to DIV
+                if (item.custom.itemType == 'tent') {
+                	if (isRequestItem) 
+                		tent_count++;
+                    $('#tent').append(itemsDOM);
+                } else if (item.custom.itemType == 'yurt') {
+                	if (isRequestItem) 
+                		yurt_count++;
+                    $('#yurt').append(itemsDOM);
+                } else if (item.custom.itemType == 'tentpeg') {
+                	if (isRequestItem) 
+                		tentpeg_count++;
+                    $('#tentpeg').append(itemsDOM);
+                } else if (item.custom.itemType == 'fly') {
+                	if (isRequestItem) 
+                		fly_count++;
+                    $('#fly').append(itemsDOM);
+                } else if (item.custom.itemType == 'cookset') {
+                	if (isRequestItem) 
+                		cookset_count++;
+                    $('#cookset').append(itemsDOM);
+                } else if (item.custom.itemType == 'stove') {
+                	if (isRequestItem) 
+                		stove_count++;
+                    $('#stove').append(itemsDOM);
+                } else {
+                	if (isRequestItem) 
+                		other_count++;
+                    $('#other').append(itemsDOM);
+                }
+                
+                // Due Date
+                if (item.custom.dueDt != null && item.custom.dueDt != '') {
+                    $('#item-' + item.shortLink + ' .item-due').removeClass('hidden');
+                    $('#item-' + item.shortLink + ' .item-due .txt').html(item.custom.dueDt);
+                }
+                
+                if (isRequestItem) {
+                    $('#switch-' + item.shortLink)
+                        .attr('checked', true)
+                        .data('isrequestitem', 'Y');
+                }
+                
+                if (item.custom.broken ||
+                		(item.custom.borrowed && item.idList != request.idList)) {
+                	$('#item-' + item.shortLink + ' .material-switch').hide();
+                }
         	});
         	
         	$('.item-switch').change( function() {
         		var index = $(this).val();
-        		var item = cards[index];
+        		var item = QM.itemsArray[index];
         		var url = item.url;
                 var idCheckItem = item.custom.idCheckItem;
                 var isRequestItem = item.custom.isRequestItem;
@@ -229,6 +161,14 @@
         	
         	updateBadge();
         	
+        }
+        
+        var isInRequestCheckList = function(item) {
+            for (var i = 0; i < request.custom.requestItems.length; i++) {
+                if (item.id == request.custom.requestItems[i].id)
+                    return true;
+            }
+            return false;
         }
         
         var getIdCheckItem = function(shortLink) {
@@ -275,17 +215,17 @@
         }
         
         var updateCount = function(item, n) {
-        	if (hasLabel(item, Label.tent)) {
+        	if (item.custom.itemType == 'tent') {
                 tent_count += n;
-            } else if (hasLabel(item, Label.yurt)) {
+            } else if (item.custom.itemType == 'yurt') {
                 yurt_count += n;
-            } else if (hasLabel(item, Label.tentpeg)) {
+            } else if (item.custom.itemType == 'tentpeg') {
                 tentpeg_count += n;
-            } else if (hasLabel(item, Label.fly)) {
+            } else if (item.custom.itemType == 'fly') {
                 fly_count += n;
-            } else if (hasLabel(item, Label.cookset)) {
+            } else if (item.custom.itemType == 'cookset') {
                 cookset_count += n;
-            } else if (hasLabel(item, Label.stove)) {
+            } else if (item.custom.itemType == 'stove') {
                 stove_count += n;
             } else {
                 other_count += n;
@@ -347,7 +287,11 @@
             requestShortLink = urlParam('i');
 
             if (requestShortLink !== null) {
-                trelloAuthorize(loadLists);
+                loadQM(function(_QM){
+                    QM = _QM;
+                    loadRequest();
+                    showRequestItems();
+                });
             } else {
                 $('#loader').remove();
                 failAlert("<strong>錯誤: </strong>Param is not existed.");

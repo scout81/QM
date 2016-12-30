@@ -19,92 +19,28 @@
     <script src="../js/properties.js" type="text/javascript"></script>
 
     <script type="text/javascript">
+        var QM = null;
         var requestShortLink;
-        var cards = [];
-        var lists = [];
         var request;
         var request_items = [];
         var request_stage = 1;
 
-        var loadLists = function() {
-            trelloGet('/boards/'+Board+'/lists',
-                function(data) { 
-                    lists = data;
-                    loadCards(); 
-                },
-                function() {
-                    failAlert("load request fail");
-                }
-            );
-        };
-        
-        var loadCards = function() {
-            trelloGet('/boards/'+Board+'/cards?checklists=all&actions=updateCheckItemStateOnCard',
-            	function(data) {
-                    showRequest(data);
-                    showRequestItems();
-                    buttonsAction();
-                    updateProgressBar($('#progress-step-'+request_stage+' .progress-bar-btn')); // Trigger Progress Bar
-                    stageChangeUI();
-                },
-                function() {
-                    failAlert("load request fail");
-                }
-            );
-        };
-
-        var showRequest = function(data) {
+        var showRequest = function() {
             $('#loader').remove();
             $('#requests').removeClass('hidden');
 
-            cards = data;
-            
-            // Find request
-            $.each(cards, function(index, card) {
-                if (card.shortLink == requestShortLink)
-                    request = card;
-            });
-
             //---------------------------------------
-            // Get request info
-            request.custom = {}; // To store custom varables
-            
-            var dueDt = null;
-            if (request.due != null)
-                dueDt = new Date(request.due);
-            
-            // Check request status
-            var pending = (request.idList == List.pending);
-            var borrowProcess = hasLabel(request, Label.borrowProcess);
-            var overdue = (!pending && !borrowProcess && dueDt != null && dueDt < new Date() && request.badges.checkItemsChecked < request.badges.checkItems);
-            var active = (hasLabel(request, Label.active) && !overdue);
-            var completed = (request.idList == List.completed);
-            
-            var borrowDt = getBorrowDate(request);
-            var activity = getActivity(request);
-            var applicant = getApplicant(request);
-            
-            request.custom.dueDt = dateFormat_ymd(dueDt);
-            request.custom.pending = pending;
-            request.custom.completed = completed;
-            request.custom.overdue = overdue;
-            request.custom.active = active;
-            request.custom.borrowProcess = borrowProcess;
-            request.custom.borrowDt = borrowDt;
-            request.custom.activity = activity;
-            request.custom.applicant = applicant;
-            request.custom.location = request.custom.activity + ' (' + request.custom.applicant + ')';
-            request.custom.checkedItemCount = request.badges.checkItemsChecked;
-            request.custom.itemCount = request.badges.checkItems;
+            // Find request
+            request = QM.requests[requestShortLink];
             
             // Request stage
-            if (pending)
+            if (request.custom.pending)
                 request_stage = 1;
-            else if (borrowProcess)
+            else if (request.custom.borrowProcess)
                 request_stage = 2;
-            else if (active || overdue)
+            else if (request.custom.active || request.custom.overdue)
                 request_stage = 3;
-            else if (completed)
+            else if (request.custom.completed)
                 request_stage = 4;
 
             // Format Description
@@ -115,13 +51,13 @@
             desc = desc.replace(/(<br>)+/g, '<br>'); // <br><br><br> -> <br>
             desc = desc.replace(/-------<br>-------/g, '-------'); // <br><br><br> -> <br>
             
-            if (overdue)
+            if (request.custom.overdue)
                 $('#request').addClass('overdue');
             
             var html = '<p id="request-label-grp"></p>' 
-                + '<strong>' + activity + '</strong>' 
+                + '<strong>' + request.custom.activity + '</strong>' 
                 + '<div class="request-subheader">' 
-                + '<div class="request-subheader-grp"><span class="glyphicon glyphicon-time" aria-hidden="true"></span> ' + borrowDt + ' / ' + request.custom.dueDt + '</div>' 
+                + '<div class="request-subheader-grp"><span class="glyphicon glyphicon-time" aria-hidden="true"></span> ' + request.custom.borrowDt + ' / ' + request.custom.dueDt + '</div>' 
                 + '<div class="request-subheader-grp" id="request-checked-count"><span class="glyphicon glyphicon-check" aria-hidden="true"></span> <span class="txt">' + request.custom.checkedItemCount+'/'+request.custom.itemCount+'</span></div>'
                 + '</div>';
             
@@ -136,74 +72,23 @@
         	if (request.checklists.length <= 0)
         		return;
         	
-        	// Sort by pos
-            request.checklists[0].checkItems.sort(function (a, b) {
-            	return (a.pos < b.pos ? -1 : 1);
-            });
-            
-            for (var i = 0; i < request.checklists[0].checkItems.length; i++) {
+        	for (var i = 0; i < request.custom.requestItems.length; i++) {
             	
-                var item = getCardByUrl(cards, request.checklists[0].checkItems[i].name);
-                var idCheckItem = request.checklists[0].checkItems[i].id;
-                
-                var location = getListNameById(lists, item.idList);
-                
-                // Check item status
-                var borrowed = (item.idList == request.idList);
-                var borrowedByOther = (!borrowed && isBorrowed(item));
-                var overdue = (item.due != null && new Date(item.due) < new Date());
-                var repair = (item.idList == List.repair);
-                var drying = (item.idList == List.drying);
-                var damaged = hasLabel(item, Label.damaged);
-                var broken = hasLabel(item, Label.broken);
-                var returned = (request.checklists[0].checkItems[i].state == 'complete');
-                
-                var dueDt = '';
-                if ( (borrowed || borrowedByOther || overdue)
-                        && (item.due != null && item.due != '') ) {
-                    dueDt = dateFormat_ymd(new Date(item.due));
-                }
-                
-                var completeDt = '';
-                if (returned) {
-                    $.each(request.actions, function(index, action) {
-                        if (action.type == 'updateCheckItemStateOnCard'
-                                && action.data.checkItem.id == idCheckItem
-                                && action.data.checkItem.state == 'complete') {
-                            completeDt = dateFormat_ymd(new Date(action.date));
-                        }
-                    });
-                }
-                
-                item.custom = {}; // To store custom varables
-                item.custom = getAdditionalData(item); // Load additional data
-                item.custom.index = i;
-                item.custom.idCheckItem = idCheckItem;
-                item.custom.location = location;
-                item.custom.borrowed = borrowed;
-                item.custom.borrowedByOther = borrowedByOther;
-                item.custom.overdue = overdue;
-                item.custom.repair = repair;
-                item.custom.drying = drying;
-                item.custom.damaged = damaged;
-                item.custom.broken = broken;
-                item.custom.returned = returned;
-                item.custom.dueDt = dueDt;
-                item.custom.completeDt = completeDt;
+                var item = request.custom.requestItems[i];
                 
                 // item status label
                 var itemLabel = '';
-                if (borrowedByOther)
+                if (item.custom.borrowedByOther)
                     itemLabel += '<span class="label st-label-large bg-borrowed">借出</span>';
-                if (overdue)
+                if (item.custom.overdue)
                     itemLabel += '<span class="label st-label-large bg-late">逾時未還</span>';
-                if (repair)
+                if (item.custom.repair)
                     itemLabel += '<span class="label st-label-large bg-repair">維修中</span>';
-                if (drying)
+                if (item.custom.drying)
                     itemLabel += '<span class="label st-label-large bg-drying">晾曬中</span>';
-                if (damaged)
+                if (item.custom.damaged)
                     itemLabel += '<span class="label st-label-large bg-damaged">損壞</span>';
-                if (broken)
+                if (item.custom.broken)
                     itemLabel += '<span class="label st-label-large bg-broken">不能使用</span>';
                 if (itemLabel != '')
                     itemLabel = '<p style="margin: 0 0 2px;">' + itemLabel + '</p>';
@@ -253,7 +138,7 @@
                     moveItem(item, item.custom.orig_loc, item.custom.orig_pos, function() {
                         // Update item location
                         item.idList = item.custom.orig_loc;
-                        item.custom.location = getListNameById(lists, item.custom.orig_loc);
+                        item.custom.location = QM.lists[item.custom.orig_loc].name;
                         item.custom.borrowed = false;
                         updateItemInfo(item);
                         //$('#item-' + item.shortLink + ' .request-ctrl-btn-change').attr('disabled', false);
@@ -319,7 +204,7 @@
             // Move item back to Original Storage List
             moveItem(item, targetList, 'bottom', function() {
                 // Update item location
-                item.custom.location = getListNameById(lists, item.custom.orig_loc);
+                item.custom.location = QM.lists[item.custom.orig_loc].name;
                 complete_count++;
                 if (complete_count == 4)
                     updateItemInfo(item);
@@ -770,7 +655,14 @@
             requestShortLink = urlParam('i');
 
             if (requestShortLink !== null) {
-                trelloAuthorize(loadLists);
+                loadQM(function(_QM){
+                    QM = _QM;
+                    showRequest();
+                    showRequestItems();
+                    buttonsAction();
+                    updateProgressBar($('#progress-step-'+request_stage+' .progress-bar-btn')); // Trigger Progress Bar
+                    stageChangeUI();
+                });
             } else {
                 $('#loader').remove();
                 failAlert("<strong>錯誤: </strong>Param is not existed.");

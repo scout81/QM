@@ -707,6 +707,31 @@ function doLoadQM(QM, trello_CardsData, trello_ListsData) {
                     }
                 });
             }
+            
+            // item type
+    		for (var j = 0; j < reqItem.labels.length; j++) {
+    	        if (reqItem.labels[j].id == Label.tent) {
+    	        	reqItem.custom.itemType = 'tent';
+    	        } else if (reqItem.labels[j].id == Label.yurt) {
+    	        	reqItem.custom.itemType = 'yurt';
+    	        } else if (reqItem.labels[j].id == Label.tentpeg) {
+    	        	reqItem.custom.itemType = 'tentpeg';
+    	        } else if (reqItem.labels[j].id == Label.fly) {
+    	        	reqItem.custom.itemType = 'fly';
+    	        } else if (reqItem.labels[j].id == Label.cookset) {
+    	        	reqItem.custom.itemType = 'cookset';
+    	        } else if (reqItem.labels[j].id == Label.stove) {
+    	        	reqItem.custom.itemType = 'stove';
+    	        } else if (reqItem.labels[j].id == Label.other) {
+    	        	reqItem.custom.itemType = 'other';
+    	        } else if (reqItem.labels[j].id == Label.tent_tent) {
+    	        	reqItem.custom.tentPart = 'tent';
+    	        } else if (reqItem.labels[j].id == Label.tent_pole) {
+    	        	reqItem.custom.tentPart = 'pole';
+    	        } else if (reqItem.labels[j].id == Label.tent_shelter) {
+    	        	reqItem.custom.tentPart = 'shelter';
+    	        }
+    	    }
          } // End of Request Items
 	});	// End of Request Items
     
