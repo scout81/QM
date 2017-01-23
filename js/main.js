@@ -14,16 +14,14 @@ function trelloAuthorize(done, fail) {
     	warningAlert("<strong>Warning: </strong>Authorize Failed.<br>" +
             "Please get the authorization in the popup.");
         trelloAuthorize2(
-            function(data) {
+            function() {
                 $("#alert-box").addClass("hidden");
                 $("#alert-box").removeClass("alert-warning");
-                console.log("auth succ: "+JSON.stringify(data));
                 done();
             },
-            function(data) {
+            function() {
                 $('#loader').remove();
                 failAlert("<strong>錯誤: </strong>Authorize Failed.");
-                console.log("auth fail: "+JSON.stringify(data));
                 fail();
             }
         );
@@ -575,10 +573,10 @@ function loadQM(done, fail) {
 					done(QM);
 				}
 			},
-	        function() {
+	        function(data) {
 				$('#loader').remove();
                 failAlert("<strong>錯誤: </strong>Get Cards Data Fail.");
-	            console.log("Get Cards Data Fail");
+	            console.log("Get Cards Data Fail: "+JSON.stringify(data));
 	            fail();
 	        }
 	    );
@@ -593,10 +591,10 @@ function loadQM(done, fail) {
 					done(QM);
 				}
 			},
-	        function() {
+	        function(data) {
 				$('#loader').remove();
                 failAlert("<strong>錯誤: </strong>Get Lists Data Fail.");
-	            console.log("Get Lists Data Fail");
+	            console.log("Get Lists Data Fail: "+JSON.stringify(data));
 	            fail();
 	        }
 	    );
