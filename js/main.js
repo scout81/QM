@@ -577,7 +577,7 @@ function loadQM(done, fail) {
 			},
 	        function(data) {
 				$('#loader').remove();
-                failAlert("<strong>錯誤: </strong>Get Cards Data Fail.");
+                failAlert("<strong>錯誤: </strong>請聯絡物資管理員。");
 	            console.log("Get Cards Data Fail: "+JSON.stringify(data));
 	            if (data.responseText == "invalid token") {
 	            	logout();
@@ -599,7 +599,7 @@ function loadQM(done, fail) {
 			},
 	        function(data) {
 				$('#loader').remove();
-                failAlert("<strong>錯誤: </strong>Get Lists Data Fail.");
+                failAlert("<strong>錯誤: </strong>請聯絡物資管理員。");
 	            console.log("Get Lists Data Fail: "+JSON.stringify(data));
 	            if (data.responseText == "invalid token") {
 	            	logout();
