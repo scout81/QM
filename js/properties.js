@@ -53,5 +53,4 @@ var Label = {
     active: '57c52babe243333e605e0cb9'     // Label - 進行中
 };
 
-//var ADMIN_EMAIL = 'scout81_leader@emaildodo.com';
-var ADMIN_EMAIL = 'm.jacky@gmail.com';
+var ADMIN_EMAIL = 'scout81_leader@emaildodo.com';
