@@ -14,14 +14,16 @@ function trelloAuthorize(done, fail) {
     	warningAlert("<strong>Warning: </strong>Authorize Failed.<br>" +
             "Please get the authorization in the popup.");
         trelloAuthorize2(
-            function() {
+            function(data) {
                 $("#alert-box").addClass("hidden");
                 $("#alert-box").removeClass("alert-warning");
+                console.log("auth succ: "+JSON.stringify(data));
                 done();
             },
-            function() {
+            function(data) {
                 $('#loader').remove();
                 failAlert("<strong>錯誤: </strong>Authorize Failed.");
+                console.log("auth fail: "+JSON.stringify(data));
                 fail();
             }
         );
@@ -253,7 +255,8 @@ function isLogin() {
 function login() {
 	var d = new Date();
     d.setDate(d.getDate() + 30); 
-    localStorage.tokenExpire = d.getDate() + "/" + d.getMonth()+1 + "/" + d.getFullYear();
+    var m = d.getMonth()+1;
+    localStorage.tokenExpire = d.getDate() + "/" + m + "/" + d.getFullYear();
 	localStorage.trelloLogin = 'Y';
 }
 
