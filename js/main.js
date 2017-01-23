@@ -212,8 +212,10 @@ function checkLogin(){
                 $('#user-id').html(username);
                 $('#admin-nav').removeClass('hidden');
             },
-            function() {
-                console.log('get login info fail');
+            function(data) {
+                console.log('get login info fail: '+JSON.stringify(data));
+                if (data.responseText == "invalid token")
+	            	logout();
             }
         );
     }
@@ -577,6 +579,10 @@ function loadQM(done, fail) {
 				$('#loader').remove();
                 failAlert("<strong>錯誤: </strong>Get Cards Data Fail.");
 	            console.log("Get Cards Data Fail: "+JSON.stringify(data));
+	            if (data.responseText == "invalid token") {
+	            	logout();
+	            	location.reload();
+	            }
 	            fail();
 	        }
 	    );
@@ -595,6 +601,10 @@ function loadQM(done, fail) {
 				$('#loader').remove();
                 failAlert("<strong>錯誤: </strong>Get Lists Data Fail.");
 	            console.log("Get Lists Data Fail: "+JSON.stringify(data));
+	            if (data.responseText == "invalid token") {
+	            	logout();
+	            	location.reload();
+	            }
 	            fail();
 	        }
 	    );
