@@ -22,11 +22,10 @@
                 "method": "keyreset"
             })
             .done( function(data) {
-            	console.log(data.result);
             	$('#alert-box').addClass("alert-info");
             	$('#alert-box').html(
             			"<strong>Trello OAuth is removed successfully.</strong><br>" +
-            		    "Please get new OAuth again by <strong>scout81</strong>.");
+            		    "Please get new OAuth again by <strong><a href='index.html'>scout81</a></strong>.");
             })
             .fail(function() {
             	$('#alert-box').addClass("alert-danger");
