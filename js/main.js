@@ -232,12 +232,14 @@ function isLogin() {
 	 }
 	 
 	 if (localStorage.trelloLogin != 'Y') {
+		 logout();
 		 return false;
 	 }
 	
 	 var d = localStorage.tokenExpire.split("/");
      if (d.length != 3) {
-    	 console.log("Invalid Expire Date");
+    	 //console.log("Invalid Expire Date");
+    	 logout();
     	 return false; 
      }
      
@@ -247,7 +249,8 @@ function isLogin() {
      if (expireDt > now) {
          return true;
      } else {
-    	 console.log("Token Expired");
+    	 //console.log("Token Expired");
+    	 logout();
     	 return false;
      }
 }
