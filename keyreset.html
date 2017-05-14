@@ -19,13 +19,18 @@
     <script type="text/javascript">
         $(function(){
         	$.get(APPSCRIPT_URL, {
-                "method": "rm_key"
+                "method": "keyreset"
             })
             .done( function(data) {
-            	console.log(data.val);                
+            	console.log(data.result);
+            	$('#alert-box').addClass("alert-info");
+            	$('#alert-box').html(
+            			"<strong>Trello OAuth is removed successfully.</strong><br>" +
+            		    "Please get new OAuth again by <strong>scout81</strong>.");
             })
             .fail(function() {
-            	console.log("Fail");
+            	$('#alert-box').addClass("alert-danger");
+                $('#alert-box').html("<strong>Fail</strong>");
             });
        		
         });
@@ -34,9 +39,8 @@
 <body>
     <div class="container">
 
-        <div class="alert alert-info" role="alert" id="alert-box">
-            <strong>Trello OAuth is removed successfully.</strong><br>
-            Please get new OAuth again by <strong>scout81</strong>.
+        <div class="alert" role="alert" id="alert-box">
+            
         </div>
 
     </div>
